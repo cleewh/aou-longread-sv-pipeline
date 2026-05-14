@@ -85,8 +85,9 @@ python3 scripts/deploy.py --region ap-southeast-1
 ```
 
 This runs `miniwdl check wdl/main.wdl`, zips `wdl/`, and calls
-`aws omics create-workflow` (or `update-workflow` with `--force`) in
-`ap-southeast-1`. The workflow ID (`wfl-xxxxxxxx`) is printed on
+`aws omics create-workflow` in `ap-southeast-1`. When `--force` is
+passed and a same-name workflow already exists, the old workflow is
+deleted and a fresh one is created. The workflow ID is printed on
 success.
 
 ### 5. Submit a run
@@ -175,6 +176,7 @@ and defaults live in
 | `enable_run_cache` | `true` | Use HealthOmics call-cache when available (Design D16, Req 17.12). |
 | `harmoniser_filter_override_json` | null | S3 URI to a JSON with harmoniser threshold overrides (Req 6.6). |
 | `<task>_cpu` / `<task>_memory_gb` / `<task>_disk_gb` | null | Per-task resource overrides (Req 11.2, 11.3, Property 11). |
+| `hifiasm_bloom_filter_bits` | `37` | Hifiasm bloom filter size exponent. Use `37` for whole-genome (16 GB bloom table, faster). Use `0` for chr20/small inputs (disables bloom filter, lower memory). |
 | `pipeline_version` | `"0.1.0"` | Must match `VERSION` and `meta.version` in `wdl/main.wdl` (Property 14, Req 16.3). |
 | `git_commit` | `"unknown"` | Git SHA recorded in `run_metadata.json` + the workflow-start log line (Req 12.3). |
 
@@ -265,15 +267,11 @@ The core pipeline is deployable without this flag.
 - **`ap-southeast-1` only.** Other regions require a fork that refreshes
   the embedded price list, the residency gate, and the ECR registry
   host; no cross-region deployment is supported out of the box.
-- **Whole-genome resource defaults are NOT yet validated on a real 30×
-  human sample.** The values in `wdl/parameter_template.json` today are
-  AoU Phase 1 whole-genome estimates. Task 22's HG002 chr20 E2E run
-  calibrates chr20-sized defaults with 25 % headroom per Req 17.4; the
-  observed high-water marks land in the `## Measured high-water marks`
-  section of [`SOURCES.md`](./SOURCES.md). Until that pass completes
-  on a whole-genome sample, operators running whole-genome samples
-  MUST supply overrides via `resource_overrides` in the Input_Manifest.
-  See Design D12 for the detailed rationale.
+- **Whole-genome sizing.** The default `hifiasm_bloom_filter_bits=37`
+  and resource defaults in `wdl/parameter_template.json` are sized for
+  whole-genome 30× HiFi. For chr20 or subset inputs, set
+  `hifiasm_bloom_filter_bits=0` and reduce memory/disk accordingly
+  (see `test/e2e/submit_manifest_optimised.json` for chr20 sizing).
 
 ## References
 

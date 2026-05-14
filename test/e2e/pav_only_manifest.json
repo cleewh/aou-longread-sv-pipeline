@@ -1,0 +1,11 @@
+{
+  "aws_account_id": "687677765589",
+  "sample_id": "HG002_chr20",
+  "hap1_fa_gz": "s3://aou-longread-sv-687677765589-ap-southeast-1/test/e2e/HG002_chr20.hap1.fa.gz",
+  "hap2_fa_gz": "s3://aou-longread-sv-687677765589-ap-southeast-1/test/e2e/HG002_chr20.hap2.fa.gz",
+  "reference_fasta": "s3://aou-longread-sv-687677765589-ap-southeast-1/test/e2e/GRCh38.primary.fa",
+  "reference_fai": "s3://aou-longread-sv-687677765589-ap-southeast-1/test/e2e/GRCh38.primary.fa.fai",
+  "output_prefix": "s3://aou-longread-sv-687677765589-ap-southeast-1/test/e2e/outputs/pav_only/",
+  "run_storage_type": "STATIC",
+  "storage_capacity": 2400
+}

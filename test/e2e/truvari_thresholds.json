@@ -1,0 +1,6 @@
+{
+  "min_recall": 0.80,
+  "min_precision": 0.80,
+  "reference_set": "GIAB v0.6 Tier 1 SVs, chr20 restricted",
+  "note": "Mirrors assertions.truvari_min_recall/truvari_min_precision from inputs.json for standalone consumption by the truvari bench wrapper. If inputs.json values change, update this file in lockstep."
+}

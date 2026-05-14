@@ -1,0 +1,8 @@
+{
+  "note": "Seeded with zeros; first successful E2E run will rewrite via cost_regression.evaluate(). Committed baseline updates should only appear after cost_regression detects a regression and the maintainer accepts the new observed total.",
+  "observed_at": null,
+  "observed_total_usd": 0.0,
+  "per_task_usd": {},
+  "pipeline_version": "0.1.0",
+  "regression_multiplier": 1.20
+}

@@ -1,0 +1,115 @@
+{
+  "title": "run_metadata.json",
+  "description": "Schema for run_metadata.json emitted by MetadataWriter_Task (Task 3.8, Property 5). Requirements: 7.2, 12.2, 16.2, 17.10.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "pipeline",
+    "run",
+    "tools",
+    "per_caller_status",
+    "outputs",
+    "Cost_Report",
+    "input_manifest"
+  ],
+  "properties": {
+    "pipeline": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["version", "git_commit", "input_manifest_sha256", "region"],
+      "properties": {
+        "version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+        "git_commit": {"type": "string", "pattern": "^([0-9a-f]{7,40}|unknown)$"},
+        "input_manifest_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "region": {"type": "string", "const": "ap-southeast-1"}
+      }
+    },
+    "run": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "healthomics_run_id",
+        "workflow_id",
+        "workflow_name",
+        "workflow_version",
+        "start_time",
+        "end_time",
+        "status",
+        "storage_type"
+      ],
+      "properties": {
+        "healthomics_run_id": {"type": "string"},
+        "workflow_id": {"type": "string"},
+        "workflow_name": {"type": "string"},
+        "workflow_version": {"type": "string"},
+        "start_time": {"type": "string"},
+        "end_time": {"type": "string"},
+        "status": {"type": "string"},
+        "storage_type": {"type": "string", "enum": ["DYNAMIC", "STATIC"]}
+      }
+    },
+    "input_manifest": {"type": "object", "additionalProperties": true},
+    "tools": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "hifiasm", "pav", "pav2svs", "sniffles2", "pbsv", "pbmm2", "harmoniser"
+      ],
+      "properties": {
+        "hifiasm": {"$ref": "#/definitions/tool_entry"},
+        "pav": {"$ref": "#/definitions/tool_entry"},
+        "pav2svs": {"$ref": "#/definitions/tool_entry"},
+        "sniffles2": {"$ref": "#/definitions/tool_entry"},
+        "pbsv": {"$ref": "#/definitions/tool_entry"},
+        "pbmm2": {"$ref": "#/definitions/tool_entry"},
+        "harmoniser": {"$ref": "#/definitions/tool_entry"}
+      }
+    },
+    "per_caller_status": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["hifiasm_pav", "sniffles2", "pbsv", "harmoniser"],
+      "properties": {
+        "hifiasm_pav": {"$ref": "#/definitions/caller_status"},
+        "sniffles2": {"$ref": "#/definitions/caller_status"},
+        "pbsv": {"$ref": "#/definitions/caller_status"},
+        "harmoniser": {"$ref": "#/definitions/caller_status"}
+      }
+    },
+    "outputs": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["harmonised_sv_vcf"],
+      "properties": {
+        "harmonised_sv_vcf": {"type": "string"},
+        "pav_sv_vcf": {"type": ["string", "null"]},
+        "sniffles2_sv_vcf": {"type": ["string", "null"]},
+        "pbsv_sv_vcf": {"type": ["string", "null"]},
+        "hifiasm_hap1_fasta": {"type": ["string", "null"]},
+        "hifiasm_hap2_fasta": {"type": ["string", "null"]}
+      }
+    },
+    "Cost_Report": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["pricing_source", "tasks", "total_estimated_usd"],
+      "properties": {
+        "pricing_source": {"type": "string"},
+        "tasks": {"type": "array", "items": {"type": "object"}},
+        "total_estimated_usd": {"type": "number", "minimum": 0}
+      }
+    }
+  },
+  "definitions": {
+    "caller_status": {"type": "string", "enum": ["succeeded", "skipped", "failed"]},
+    "tool_entry": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["version", "image_digest"],
+      "properties": {
+        "version": {"type": "string"},
+        "image_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+      }
+    }
+  }
+}

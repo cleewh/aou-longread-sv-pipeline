@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "aou-longread-sv-pipeline"
+description = "AoU Long-Read SV Detection Pipeline on AWS HealthOmics (ap-southeast-1)"
+readme = "README.md"
+license = { text = "BSD-3-Clause" }
+requires-python = ">=3.11"
+dynamic = ["version"]
+authors = [
+    { name = "AoU Long-Read SV Pipeline Maintainers" },
+]
+# Runtime deps are intentionally empty at scaffold time. Tooling scripts
+# (deploy.py, submit-run.py, mirror-images.py, metadata-writer) pull from
+# the dev/test extras below until each task lands its own runtime deps.
+dependencies = []
+
+[project.optional-dependencies]
+# Development + test tooling required by tasks 2 onward. Versions are left
+# open here; CI / container builds pin exact versions via requirements.txt
+# files under the relevant container or scripts/ subtree.
+dev = [
+    "pytest",
+    "hypothesis",
+    "boto3",
+    "moto",
+    "PyYAML",
+    "jsonschema",
+    "miniwdl",
+    "cfn-lint",
+]
+
+[tool.setuptools.dynamic]
+version = { file = "VERSION" }
+
+[tool.pytest.ini_options]
+# Markers used by property-based tests — see Design §Testing Strategy.
+markers = [
+    "property_test: Hypothesis-driven property-based test (see Design §Testing Strategy)",
+]
+testpaths = ["test", "containers", "scripts"]

@@ -1,0 +1,66 @@
+{
+  "_comment": "HG002 PacBio HiFi chr20 end-to-end test against GIAB v0.6 Tier 1 SVs (GRCh38). The hifi BAM is an aligned chr20 subset of GIAB's public HG002 pbmm2-aligned BAM (GRCh38, PacBio_CCS_15kb_20kb_chemistry2); the pipeline honours `hifi_reads_aligned=true` in submit_manifest and skips Pbmm2_Align. Sha256 + size_bytes values were computed during the first staging run on the ap-southeast-1 EC2 builder on 2026-05-10.",
+  "description": "HG002 PacBio HiFi chr20 end-to-end test against GIAB v0.6 Tier 1 SVs (GRCh38). Aligned-BAM mode (hifi_reads_aligned=true).",
+  "staged_inputs": {
+    "hifi_reads_bam": {
+      "s3_uri": "s3://aou-longread-sv-687677765589-ap-southeast-1/test/e2e/HG002_chr20.hifi.bam",
+      "sha256": "1125cc37e6a57b2872ac14572efe091b9336790c530c2c878b3351bf3a393eb2",
+      "size_bytes": 2554934460,
+      "upstream_uri": "subset-chr20://s3://giab/data/AshkenazimTrio/HG002_NA24385_son/PacBio_CCS_15kb_20kb_chemistry2/GRCh38/HG002.SequelII.merged_15kb_20kb.pbmm2.GRCh38.haplotag.10x.bam"
+    },
+    "hifi_reads_bai": {
+      "s3_uri": "s3://aou-longread-sv-687677765589-ap-southeast-1/test/e2e/HG002_chr20.hifi.bam.bai",
+      "sha256": "be89b2d2521f88e594aabf1ac5a9415c02a977f0e5de49032c6b1cb83fd8861a",
+      "size_bytes": 552640,
+      "upstream_uri": "subset-chr20-bai://s3://giab/data/AshkenazimTrio/HG002_NA24385_son/PacBio_CCS_15kb_20kb_chemistry2/GRCh38/HG002.SequelII.merged_15kb_20kb.pbmm2.GRCh38.haplotag.10x.bam"
+    },
+    "reference_fasta": {
+      "s3_uri": "s3://aou-longread-sv-687677765589-ap-southeast-1/test/e2e/GRCh38.fa",
+      "sha256": "93157a161863464c9435062fd67c173fdaf99cb8b32f1455018361387ffa5564",
+      "size_bytes": 3249912778,
+      "upstream_uri": "s3://broad-references/hg38/v0/Homo_sapiens_assembly38.fasta"
+    },
+    "reference_fai": {
+      "s3_uri": "s3://aou-longread-sv-687677765589-ap-southeast-1/test/e2e/GRCh38.fa.fai",
+      "sha256": "edefd93c489dc1baefad312f40388089f8db5cf6dcc3ba0955669ead274e8b6b",
+      "size_bytes": 160928,
+      "upstream_uri": "faidx://s3://aou-longread-sv-687677765589-ap-southeast-1/test/e2e/GRCh38.fa"
+    }
+  },
+  "truth_set": {
+    "giab_sv_vcf": {
+      "s3_uri": "s3://aou-longread-sv-687677765589-ap-southeast-1/test/e2e/HG002_SVs_Tier1_v0.6.vcf.gz",
+      "sha256": "1bc8e515189e32eb02a8a2050a4f70e88a80d9ad1d9fafe65ca1931d6f7b7f13",
+      "size_bytes": 25738211,
+      "upstream_uri": "https://ftp-trace.ncbi.nlm.nih.gov/giab/ftp/data/AshkenazimTrio/analysis/NIST_SVs_Integration_v0.6/HG002_SVs_Tier1_v0.6.vcf.gz"
+    },
+    "giab_sv_bed": {
+      "s3_uri": "s3://aou-longread-sv-687677765589-ap-southeast-1/test/e2e/HG002_SVs_Tier1_v0.6.bed",
+      "sha256": "a9bf43a242e74d403cf78f158dbf5b657b5aa5b4961fbba7218bbfe54072d82c",
+      "size_bytes": 725960,
+      "upstream_uri": "https://ftp-trace.ncbi.nlm.nih.gov/giab/ftp/data/AshkenazimTrio/analysis/NIST_SVs_Integration_v0.6/HG002_SVs_Tier1_v0.6.bed"
+    }
+  },
+  "assertions": {
+    "min_harmonised_sv_records_chr20": 100,
+    "truvari_min_recall": 0.80,
+    "truvari_min_precision": 0.80,
+    "wall_clock_hours_max": 6,
+    "expected_callers": ["PAV", "Sniffles2", "pbsv"]
+  },
+  "submit_manifest": {
+    "sample_id": "HG002_chr20",
+    "hifi_reads_bam": "s3://aou-longread-sv-687677765589-ap-southeast-1/test/e2e/HG002_chr20.hifi.bam",
+    "hifi_reads_bai": "s3://aou-longread-sv-687677765589-ap-southeast-1/test/e2e/HG002_chr20.hifi.bam.bai",
+    "hifi_reads_aligned": true,
+    "reference_fasta": "s3://aou-longread-sv-687677765589-ap-southeast-1/test/e2e/GRCh38.fa",
+    "reference_fai": "s3://aou-longread-sv-687677765589-ap-southeast-1/test/e2e/GRCh38.fa.fai",
+    "output_prefix": "s3://aou-longread-sv-687677765589-ap-southeast-1/test/e2e/outputs/HG002_chr20/",
+    "run_hifiasm_pav": true,
+    "run_sniffles2": true,
+    "run_pbsv": true,
+    "shard_by_chromosome": true,
+    "run_storage_type": "DYNAMIC",
+    "enable_run_cache": true
+  }
+}

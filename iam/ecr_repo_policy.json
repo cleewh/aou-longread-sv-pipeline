@@ -1,0 +1,22 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AllowHealthOmicsPull",
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "omics.amazonaws.com"
+      },
+      "Action": [
+        "ecr:BatchCheckLayerAvailability",
+        "ecr:BatchGetImage",
+        "ecr:GetDownloadUrlForLayer"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "aws:SourceAccount": "687677765589"
+        }
+      }
+    }
+  ]
+}

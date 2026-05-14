@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+*.egg-info/
+
+# Hypothesis test database
+.hypothesis/
+
+# pytest
+.pytest_cache/
+
+# IDE
+.vscode/
+.idea/
+
+# macOS
+.DS_Store
+._*
+
+# Docker buildx
+.docker/
+
+# HealthOmics config (contains account-specific info)
+.healthomics/config.toml
+
+# Temporary test fixtures
+test/e2e/_mw_fixtures/
+test/e2e/_h_fixtures/

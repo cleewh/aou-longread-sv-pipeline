@@ -1,0 +1,10 @@
+# Marker file read by scripts/mirror-images.py.
+#
+# When this file is present in a containers/<name>/ directory, the mirror
+# script uses the repository root as the `docker buildx build` context
+# instead of the per-tool directory, and passes
+# `-f containers/<name>/Dockerfile` explicitly.
+#
+# The metadata-writer image needs the repo root as context so it can
+# COPY `pricing/healthomics-ap-southeast-1.json` into the image at build
+# time (Design D9, Requirement 17.10).

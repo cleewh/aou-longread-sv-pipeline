@@ -1,0 +1,10 @@
+{
+  "hap1_fa_gz": {"description": "Haplotype-1 bgzipped FASTA from hifiasm"},
+  "hap2_fa_gz": {"description": "Haplotype-2 bgzipped FASTA from hifiasm"},
+  "reference_fasta": {"description": "GRCh38 primary-only FASTA"},
+  "reference_fai": {"description": "Reference .fai index"},
+  "sample_id": {"description": "Sample id (used as output prefix)"},
+  "pav_cpu": {"description": "PAV CPU override", "optional": true},
+  "pav_memory_gb": {"description": "PAV memory GB override", "optional": true},
+  "pav_disk_gb": {"description": "PAV disk GB override", "optional": true}
+}

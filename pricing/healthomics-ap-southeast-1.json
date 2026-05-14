@@ -1,0 +1,162 @@
+{
+  "schema_version": "1.0",
+  "region": "ap-southeast-1",
+  "source": {
+    "url": "https://aws.amazon.com/healthomics/pricing/",
+    "fetched_at": "2026-05-09",
+    "notes": "Design-time approximations - verify before production cost analysis. AWS HealthOmics does not publish a per-instance price table on the public pricing page, so this file uses a linear per-vCPU fit derived from publicly-quoted HealthOmics rates: omics.c.* = $0.085/vCPU-hour, omics.m.* = $0.095/vCPU-hour, omics.r.* = $0.125/vCPU-hour. ap-southeast-1 is typically within ~5-10% of us-east-1 across AWS services and is used as a best-effort proxy here. Storage rates derived from quoted HealthOmics monthly rates ($0.10/GB-month DYNAMIC, $0.15/GB-month STATIC) divided by 730.5 hours/month. Refresh this file quarterly and rebuild the metadata-writer container before any production cost reporting."
+  },
+  "pricing_source_sha256": "5e4ab86b93fb433ca9dbd30f3204c192316c2bf621a3b8105cac66c2d3c99e76",
+  "instance_usd_per_hour": {
+    "omics.c.large": 0.17,
+    "omics.c.xlarge": 0.34,
+    "omics.c.2xlarge": 0.68,
+    "omics.c.4xlarge": 1.36,
+    "omics.c.8xlarge": 2.72,
+    "omics.c.12xlarge": 4.08,
+    "omics.c.16xlarge": 5.44,
+    "omics.c.24xlarge": 8.16,
+    "omics.m.large": 0.19,
+    "omics.m.xlarge": 0.38,
+    "omics.m.2xlarge": 0.76,
+    "omics.m.4xlarge": 1.52,
+    "omics.m.8xlarge": 3.04,
+    "omics.m.12xlarge": 4.56,
+    "omics.m.16xlarge": 6.08,
+    "omics.m.24xlarge": 9.12,
+    "omics.r.large": 0.25,
+    "omics.r.xlarge": 0.5,
+    "omics.r.2xlarge": 1.0,
+    "omics.r.4xlarge": 2.0,
+    "omics.r.8xlarge": 4.0,
+    "omics.r.12xlarge": 6.0,
+    "omics.r.16xlarge": 8.0,
+    "omics.r.24xlarge": 12.0
+  },
+  "instance_specs": {
+    "omics.c.large": {
+      "cpu": 2,
+      "memory_gb": 4,
+      "family": "compute"
+    },
+    "omics.c.xlarge": {
+      "cpu": 4,
+      "memory_gb": 8,
+      "family": "compute"
+    },
+    "omics.c.2xlarge": {
+      "cpu": 8,
+      "memory_gb": 16,
+      "family": "compute"
+    },
+    "omics.c.4xlarge": {
+      "cpu": 16,
+      "memory_gb": 32,
+      "family": "compute"
+    },
+    "omics.c.8xlarge": {
+      "cpu": 32,
+      "memory_gb": 64,
+      "family": "compute"
+    },
+    "omics.c.12xlarge": {
+      "cpu": 48,
+      "memory_gb": 96,
+      "family": "compute"
+    },
+    "omics.c.16xlarge": {
+      "cpu": 64,
+      "memory_gb": 128,
+      "family": "compute"
+    },
+    "omics.c.24xlarge": {
+      "cpu": 96,
+      "memory_gb": 192,
+      "family": "compute"
+    },
+    "omics.m.large": {
+      "cpu": 2,
+      "memory_gb": 8,
+      "family": "general"
+    },
+    "omics.m.xlarge": {
+      "cpu": 4,
+      "memory_gb": 16,
+      "family": "general"
+    },
+    "omics.m.2xlarge": {
+      "cpu": 8,
+      "memory_gb": 32,
+      "family": "general"
+    },
+    "omics.m.4xlarge": {
+      "cpu": 16,
+      "memory_gb": 64,
+      "family": "general"
+    },
+    "omics.m.8xlarge": {
+      "cpu": 32,
+      "memory_gb": 128,
+      "family": "general"
+    },
+    "omics.m.12xlarge": {
+      "cpu": 48,
+      "memory_gb": 192,
+      "family": "general"
+    },
+    "omics.m.16xlarge": {
+      "cpu": 64,
+      "memory_gb": 256,
+      "family": "general"
+    },
+    "omics.m.24xlarge": {
+      "cpu": 96,
+      "memory_gb": 384,
+      "family": "general"
+    },
+    "omics.r.large": {
+      "cpu": 2,
+      "memory_gb": 16,
+      "family": "memory"
+    },
+    "omics.r.xlarge": {
+      "cpu": 4,
+      "memory_gb": 32,
+      "family": "memory"
+    },
+    "omics.r.2xlarge": {
+      "cpu": 8,
+      "memory_gb": 64,
+      "family": "memory"
+    },
+    "omics.r.4xlarge": {
+      "cpu": 16,
+      "memory_gb": 128,
+      "family": "memory"
+    },
+    "omics.r.8xlarge": {
+      "cpu": 32,
+      "memory_gb": 256,
+      "family": "memory"
+    },
+    "omics.r.12xlarge": {
+      "cpu": 48,
+      "memory_gb": 384,
+      "family": "memory"
+    },
+    "omics.r.16xlarge": {
+      "cpu": 64,
+      "memory_gb": 512,
+      "family": "memory"
+    },
+    "omics.r.24xlarge": {
+      "cpu": 96,
+      "memory_gb": 768,
+      "family": "memory"
+    }
+  },
+  "run_storage_usd_per_gb_hour": {
+    "DYNAMIC": 0.000137,
+    "STATIC": 0.000206
+  }
+}

@@ -1,0 +1,18 @@
+# .dockerignore for the pbmm2 image.
+#
+# Build context is containers/pbmm2/ (no BUILD_CONTEXT_REPO_ROOT
+# marker here, so scripts/mirror-images.py uses the per-tool directory).
+# These patterns exclude standard Python development artefacts that
+# have no place in a container image.
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache
+*.egg-info
+.mypy_cache
+.ruff_cache
+.venv
+venv
+.env
+.env.local

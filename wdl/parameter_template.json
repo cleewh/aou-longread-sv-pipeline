@@ -1,0 +1,218 @@
+{
+  "sample_id": {
+    "description": "Sample identifier matching ^[A-Za-z0-9_-]+$; used to prefix every output file (Req 2.1, 7.3).",
+    "optional": false
+  },
+  "hifi_reads_bam": {
+    "description": "S3 URI to the PacBio HiFi reads in BAM format (aligned or unaligned per hifi_reads_aligned).",
+    "optional": false
+  },
+  "hifi_reads_bai": {
+    "description": "Optional S3 URI to the .bai index. Required when hifi_reads_aligned=true (Req 2.3); unused when false.",
+    "optional": true
+  },
+  "hifi_reads_aligned": {
+    "description": "When true, skip Pbmm2_Align and feed hifi_reads_bam straight to the read-based callers (Req 2.3, 17.9).",
+    "optional": true
+  },
+  "reference_fasta": {
+    "description": "S3 URI to the reference FASTA (GRCh38 no-alt analysis set by default).",
+    "optional": false
+  },
+  "reference_fai": {
+    "description": "S3 URI to the reference FASTA .fai index.",
+    "optional": false
+  },
+  "output_prefix": {
+    "description": "S3 URI ending in '/' under which all output files are written (Req 7.1, 7.4).",
+    "optional": false
+  },
+  "run_hifiasm_pav": {
+    "description": "Enable the Hifiasm + PAV + PAV2SVs assembly-based caller chain (Req 2.6, 3.1).",
+    "optional": true
+  },
+  "run_sniffles2": {
+    "description": "Enable the Sniffles2 read-based caller (Req 2.6, 4.1).",
+    "optional": true
+  },
+  "run_pbsv": {
+    "description": "Enable the PBSV read-based caller (Req 2.6, 5.1).",
+    "optional": true
+  },
+  "shard_by_chromosome": {
+    "description": "Fan Sniffles2 and PBSV out per chromosome (one task per GRCh38 autosome + chrX/chrY). Hifiasm and PAV are whole-genome (Design D7, Req 17.8).",
+    "optional": true
+  },
+  "run_storage_type": {
+    "description": "HealthOmics run-storage mode. DYNAMIC auto-scales run storage and bills per GB-hour; STATIC allocates a fixed size for the full run (Design D6, Req 17.2).",
+    "optional": true
+  },
+  "enable_run_cache": {
+    "description": "Use the HealthOmics call-cache when available in ap-southeast-1 (Design D16, Req 17.12).",
+    "optional": true
+  },
+  "harmoniser_filter_override_json": {
+    "description": "Optional S3 URI to a JSON file of filter threshold overrides passed verbatim to the harmoniser (Req 6.6).",
+    "optional": true
+  },
+  "pbmm2_cpu": {
+    "description": "Override Pbmm2_Align vCPU count. Default 16 matches whole-genome HiFi alignment per AoU Phase 1 (D12).",
+    "optional": true
+  },
+  "pbmm2_memory_gb": {
+    "description": "Override Pbmm2_Align memory in GB. Default 64 (D12).",
+    "optional": true
+  },
+  "pbmm2_disk_gb": {
+    "description": "Override Pbmm2_Align local SSD in GB. Default 500 (D12).",
+    "optional": true
+  },
+  "hifiasm_cpu": {
+    "description": "Override Hifiasm_Assemble vCPU count. Default 48 for whole-genome 30x HiFi (Req 11.2, D12).",
+    "optional": true
+  },
+  "hifiasm_memory_gb": {
+    "description": "Override Hifiasm_Assemble memory in GB. Default 256 \u2014 required for whole-genome assembly (D13).",
+    "optional": true
+  },
+  "hifiasm_disk_gb": {
+    "description": "Override Hifiasm_Assemble local SSD in GB. Default 1500 (D12).",
+    "optional": true
+  },
+  "pav_cpu": {
+    "description": "Override PAV_Run vCPU count. Default 32; PAV parallelises per-contig inside the task via Snakemake (Design D14).",
+    "optional": true
+  },
+  "pav_memory_gb": {
+    "description": "Override PAV_Run memory in GB. Default 128 (D12).",
+    "optional": true
+  },
+  "pav_disk_gb": {
+    "description": "Override PAV_Run local SSD in GB. Default 1000 (D12).",
+    "optional": true
+  },
+  "pav2svs_cpu": {
+    "description": "Override PAV2SVs vCPU count. Default 2 (small filter task).",
+    "optional": true
+  },
+  "pav2svs_memory_gb": {
+    "description": "Override PAV2SVs memory in GB. Default 8.",
+    "optional": true
+  },
+  "pav2svs_disk_gb": {
+    "description": "Override PAV2SVs local SSD in GB. Default 50.",
+    "optional": true
+  },
+  "sniffles2_cpu": {
+    "description": "Override per-shard Sniffles2_Task vCPU count. Default 8 (D12).",
+    "optional": true
+  },
+  "sniffles2_memory_gb": {
+    "description": "Override per-shard Sniffles2_Task memory in GB. Default 32 (D12).",
+    "optional": true
+  },
+  "sniffles2_disk_gb": {
+    "description": "Override per-shard Sniffles2_Task local SSD in GB. Default 200 (D12).",
+    "optional": true
+  },
+  "sniffles2_merge_cpu": {
+    "description": "Override Sniffles2_Merge_Task vCPU count. Default 2.",
+    "optional": true
+  },
+  "sniffles2_merge_memory_gb": {
+    "description": "Override Sniffles2_Merge_Task memory in GB. Default 8.",
+    "optional": true
+  },
+  "sniffles2_merge_disk_gb": {
+    "description": "Override Sniffles2_Merge_Task local SSD in GB. Default 100.",
+    "optional": true
+  },
+  "pbsv_discover_cpu": {
+    "description": "Override per-shard PBSV_Discover_Task vCPU count. Default 4 (D12).",
+    "optional": true
+  },
+  "pbsv_discover_memory_gb": {
+    "description": "Override per-shard PBSV_Discover_Task memory in GB. Default 16 (D12).",
+    "optional": true
+  },
+  "pbsv_discover_disk_gb": {
+    "description": "Override per-shard PBSV_Discover_Task local SSD in GB. Default 200 (D12).",
+    "optional": true
+  },
+  "pbsv_merge_svsig_cpu": {
+    "description": "Override PBSV_Merge_Svsig_Task vCPU count. Default 2.",
+    "optional": true
+  },
+  "pbsv_merge_svsig_memory_gb": {
+    "description": "Override PBSV_Merge_Svsig_Task memory in GB. Default 8.",
+    "optional": true
+  },
+  "pbsv_merge_svsig_disk_gb": {
+    "description": "Override PBSV_Merge_Svsig_Task local SSD in GB. Default 100.",
+    "optional": true
+  },
+  "pbsv_call_cpu": {
+    "description": "Override PBSV_Call_Task vCPU count. Default 8 (D12).",
+    "optional": true
+  },
+  "pbsv_call_memory_gb": {
+    "description": "Override PBSV_Call_Task memory in GB. Default 64 (D12).",
+    "optional": true
+  },
+  "pbsv_call_disk_gb": {
+    "description": "Override PBSV_Call_Task local SSD in GB. Default 200 (D12).",
+    "optional": true
+  },
+  "harmoniser_cpu": {
+    "description": "Override Harmoniser vCPU count. Default 8 (D12).",
+    "optional": true
+  },
+  "harmoniser_memory_gb": {
+    "description": "Override Harmoniser memory in GB. Default 32 (D12).",
+    "optional": true
+  },
+  "harmoniser_disk_gb": {
+    "description": "Override Harmoniser local SSD in GB. Default 200 (D12).",
+    "optional": true
+  },
+  "input_manifest_json": {
+    "description": "S3 URI to the serialised Input_Manifest JSON, written by submit-run.py and echoed into run_metadata.json (Req 7.2, 16.2).",
+    "optional": false
+  },
+  "pipeline_version": {
+    "description": "Semantic pipeline version string, must match VERSION file and meta.version in main.wdl (Property 14, Req 16.3).",
+    "optional": true
+  },
+  "git_commit": {
+    "description": "Git commit SHA of the pipeline repository at the time this workflow revision was deployed (Req 12.3, 16.2).",
+    "optional": true
+  },
+  "healthomics_run_id": {
+    "description": "HealthOmics run identifier, supplied by submit-run.py after StartRun returns (Req 12.2).",
+    "optional": true
+  },
+  "workflow_id": {
+    "description": "HealthOmics workflow identifier (wfl-...). Populated by submit-run.py (Req 12.2).",
+    "optional": true
+  },
+  "workflow_name": {
+    "description": "Logical workflow name recorded in run_metadata.json.",
+    "optional": true
+  },
+  "workflow_version": {
+    "description": "Workflow version string recorded in run_metadata.json. Matches pipeline_version in the default case.",
+    "optional": true
+  },
+  "run_start_time": {
+    "description": "ISO-8601 UTC start timestamp of the HealthOmics run, supplied by submit-run.py (Req 12.2).",
+    "optional": true
+  },
+  "run_end_time": {
+    "description": "ISO-8601 UTC end timestamp of the HealthOmics run, supplied by submit-run.py (Req 12.2).",
+    "optional": true
+  },
+  "run_status": {
+    "description": "Final status string for the HealthOmics run (e.g. COMPLETED, FAILED). Written verbatim into run_metadata.json (Req 12.2).",
+    "optional": true
+  }
+}

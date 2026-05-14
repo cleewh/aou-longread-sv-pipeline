@@ -1,0 +1,42 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "S3Read",
+      "Effect": "Allow",
+      "Action": ["s3:GetObject", "s3:GetObjectVersion"],
+      "Resource": ["arn:aws:s3:::${INPUT_BUCKET}/*"]
+    },
+    {
+      "Sid": "S3Write",
+      "Effect": "Allow",
+      "Action": ["s3:PutObject", "s3:AbortMultipartUpload"],
+      "Resource": ["arn:aws:s3:::${OUTPUT_BUCKET}/${OUTPUT_PREFIX}*"]
+    },
+    {
+      "Sid": "S3List",
+      "Effect": "Allow",
+      "Action": ["s3:ListBucket"],
+      "Resource": ["arn:aws:s3:::${INPUT_BUCKET}", "arn:aws:s3:::${OUTPUT_BUCKET}"],
+      "Condition": {"StringLike": {"s3:prefix": ["${OUTPUT_PREFIX}*", ""]}}
+    },
+    {
+      "Sid": "EcrAuth",
+      "Effect": "Allow",
+      "Action": ["ecr:GetAuthorizationToken"],
+      "Resource": "*"
+    },
+    {
+      "Sid": "EcrPull",
+      "Effect": "Allow",
+      "Action": ["ecr:BatchGetImage", "ecr:GetDownloadUrlForLayer", "ecr:BatchCheckLayerAvailability"],
+      "Resource": ${ECR_REPO_ARNS_JSON_ARRAY}
+    },
+    {
+      "Sid": "Logs",
+      "Effect": "Allow",
+      "Action": ["logs:CreateLogStream", "logs:PutLogEvents"],
+      "Resource": "arn:aws:logs:ap-southeast-1:${ACCOUNT_ID}:log-group:/aws/omics/WorkflowLog:*"
+    }
+  ]
+}

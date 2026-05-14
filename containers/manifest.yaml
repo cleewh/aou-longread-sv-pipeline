@@ -1,0 +1,98 @@
+# Container image manifest for the AoU long-read SV pipeline.
+#
+# See design.md §ECR topology and image mirroring for the upstream → ECR
+# mapping, and Requirement 8 (Container image residency and provenance) for
+# the fields every entry MUST carry.
+#
+# Each entry has:
+#   name         - logical tool name (matches containers/<name>/ directory)
+#   upstream     - source image reference or base image used to build locally
+#   ecr_repo     - destination repository in ap-southeast-1 ECR (aou-sv/<tool>)
+#   tag          - semantic version tag to apply in ECR
+#   platforms    - multi-arch matrix to mirror/build for
+#   digest_<p>   - per-platform image digest, filled in by
+#                  scripts/mirror-images.py once images are pushed to ECR
+#
+# Digest placeholders MUST remain literal until mirror-images.py rewrites
+# them; downstream validators (Property 7, Property 17) rely on the presence
+# of a digest field per listed platform.
+
+images:
+  - name: hifiasm
+    # Compiled from source on debian:12-slim. amd64-ONLY: hifiasm
+    # 0.19.9 uses x86 SSE2/SSE4.2 intrinsics directly (emmintrin.h) in
+    # core source files, so there is no clean arm64 build path without
+    # a source-level sse2neon port. The Graviton matrix in SOURCES.md
+    # documents the amd64-only fallback (analogous to pbsv and pav).
+    upstream: debian:12-slim
+    ecr_repo: aou-sv/hifiasm
+    tag: 0.19.9
+    platforms: [linux/amd64]
+    digest_amd64: sha256:47911f04186fb399c4885088c7de44fea48873111fb4c4f63fd8278a0006e187
+
+  - name: pbmm2
+    # https://quay.io/repository/biocontainers/pbmm2
+    upstream: quay.io/biocontainers/pbmm2:1.13.1--h9ee0642_0
+    ecr_repo: aou-sv/pbmm2
+    tag: 1.13.1
+    platforms: [linux/amd64, linux/arm64]
+    digest_amd64: sha256:3d9990b0b9d99911063348ab5ce288b202183c0ff73c628505ea9650e4909e7f
+    digest_arm64: sha256:7985cfed9187ea65f84103917e0faed7fab85a4f9c5ac55bf7a654d1fb4e5aba
+
+  - name: sniffles2
+    # https://quay.io/repository/biocontainers/sniffles - multi-arch
+    # upstream, but our two-stage Dockerfile that pulls in bcftools +
+    # tabix makes arm64 emulation cross-compile problematic. amd64
+    # only for v0.1; if arm64 support lands, upstream bcftools can be
+    # installed in the final stage via conda/mamba arm64 packages.
+    upstream: quay.io/biocontainers/sniffles:2.4--pyhdfd78af_0
+    ecr_repo: aou-sv/sniffles2
+    tag: "2.4"
+    platforms: [linux/amd64]
+    digest_amd64: sha256:25f7c214ff891c74343188c66b10cc77439315c9956c65618cf339a7ef36be60
+
+  - name: pbsv
+    # https://quay.io/repository/biocontainers/pbsv - amd64 only upstream
+    upstream: quay.io/biocontainers/pbsv:2.9.0--h9ee0642_0
+    ecr_repo: aou-sv/pbsv
+    tag: 2.9.0
+    platforms: [linux/amd64]
+    digest_amd64: sha256:bc6e5a867d30042138f3ef94471fbe16e8ad03efc1794466c56eb3c198db263f
+
+  - name: pav
+    # https://hub.docker.com/r/becklab/pav - amd64 only upstream (PAV
+    # bundles RepeatMasker + TRF + DUST, all amd64-only). This is the
+    # PAV maintainer-published image; biocontainers does not publish a
+    # PAV build.
+    upstream: becklab/pav:2.4.6
+    ecr_repo: aou-sv/pav
+    tag: 2.4.6
+    platforms: [linux/amd64]
+    digest_amd64: sha256:e36ea9a89aa9370e6336ac64666a2f27b1d3438fd368008d4c53404505b40d07
+
+  - name: pav2svs
+    # Locally built from containers/pav2svs/Dockerfile (base python:3.11-slim)
+    upstream: python:3.11-slim
+    ecr_repo: aou-sv/pav2svs
+    tag: 0.1.0
+    platforms: [linux/amd64, linux/arm64]
+    digest_amd64: sha256:2fa183249819228d70af554f1b98a7d85f65bd7971c091a928a6770bd524136a
+    digest_arm64: sha256:14b6933676451ca0af21ba91b2dde7cacd4617cf790107982dbafe89fc748357
+
+  - name: harmoniser
+    # Locally built from containers/harmoniser/Dockerfile (base python:3.11-slim)
+    upstream: python:3.11-slim
+    ecr_repo: aou-sv/harmoniser
+    tag: 0.1.0
+    platforms: [linux/amd64, linux/arm64]
+    digest_amd64: sha256:e60133ad11d00c604249f54db3a3cbeec415dff18d8a72cc44907c3b7cd10c75
+    digest_arm64: sha256:fd2613b27a6f6a3ca6bca02a005059e6f3bfd9b03cd7fe66c0e66acaad6b7d7a
+
+  - name: metadata-writer
+    # Locally built from containers/metadata-writer/Dockerfile (base python:3.11-slim)
+    upstream: python:3.11-slim
+    ecr_repo: aou-sv/metadata-writer
+    tag: 0.1.0
+    platforms: [linux/amd64, linux/arm64]
+    digest_amd64: sha256:8499b9b304fbaa4617ceb5c22a80a72d2b807c452bd3f5f57c5061a734e7c92a
+    digest_arm64: sha256:7d183992535e1d77b21f2b9bca0e2e7a69ce9c2d5e6a87672b1499e1b9f48963

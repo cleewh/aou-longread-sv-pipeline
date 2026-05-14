@@ -1,0 +1,55 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >-
+  Optional AWS Budgets alarm for the AoU Long-Read SV Pipeline HealthOmics spend
+  in ap-southeast-1 (Requirement 17.13). Deployed by scripts/deploy.py when the
+  operator passes --with-budget-alarm.
+
+Parameters:
+  Threshold:
+    Type: Number
+    Description: Monthly USD threshold above which the budget alarm fires.
+    MinValue: 0.01
+  SnsTopicArn:
+    Type: String
+    Description: SNS topic ARN notified when the budget is exceeded.
+    AllowedPattern: '^arn:aws:sns:[a-z0-9-]+:\d{12}:.+$'
+    ConstraintDescription: Must be a fully-qualified SNS topic ARN.
+
+Resources:
+  AouSvHealthOmicsBudget:
+    Type: AWS::Budgets::Budget
+    Properties:
+      Budget:
+        BudgetName: !Sub 'aou-longread-sv-pipeline-monthly-${AWS::StackName}'
+        BudgetType: COST
+        TimeUnit: MONTHLY
+        BudgetLimit:
+          Amount: !Ref Threshold
+          Unit: USD
+        CostFilters:
+          Service:
+            - 'AWS HealthOmics'
+          Region:
+            - ap-southeast-1
+      NotificationsWithSubscribers:
+        - Notification:
+            NotificationType: ACTUAL
+            ComparisonOperator: GREATER_THAN
+            Threshold: 100
+            ThresholdType: PERCENTAGE
+          Subscribers:
+            - SubscriptionType: SNS
+              Address: !Ref SnsTopicArn
+        - Notification:
+            NotificationType: FORECASTED
+            ComparisonOperator: GREATER_THAN
+            Threshold: 100
+            ThresholdType: PERCENTAGE
+          Subscribers:
+            - SubscriptionType: SNS
+              Address: !Ref SnsTopicArn
+
+Outputs:
+  BudgetName:
+    Description: Name of the AWS Budgets budget tracking HealthOmics spend.
+    Value: !Ref AouSvHealthOmicsBudget

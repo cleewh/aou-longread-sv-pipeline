@@ -1,0 +1,26 @@
+# .dockerignore for the metadata-writer image.
+#
+# This file's build context is the repository root (see BUILD_CONTEXT_REPO_ROOT
+# marker), so these patterns apply from the repo root. We deliberately do
+# NOT exclude `pricing/` — the Dockerfile needs it at build time to bake
+# the ap-southeast-1 HealthOmics price list into /opt/pricing/.
+#
+# Generic Python caches and egg-info directories live all over the repo
+# and should never ship into a container.
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache
+*.egg-info
+.mypy_cache
+.ruff_cache
+
+# Local dev artefacts the tool image does not need.
+.venv
+venv
+.env
+.env.local
+
+# The pipeline's own test outputs and E2E staging artefacts.
+test/e2e/_staged/

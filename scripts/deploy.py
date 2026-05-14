@@ -290,14 +290,22 @@ def main(argv: list[str] | None = None) -> int:
                 storageType="DYNAMIC",
             )
             workflow_id = resp["id"]
-        else:  # action == "update"
+        else:  # action == "update" — delete old + recreate (boto3 update_workflow
+               # does not support definitionZip/parameterTemplate in all versions)
             workflow_id = existing[0]["id"]
-            omics.update_workflow(
-                id=workflow_id,
+            omics.delete_workflow(id=workflow_id)
+            # Brief pause to allow deletion to propagate
+            import time
+            time.sleep(5)
+            resp = omics.create_workflow(
                 name=args.name,
+                description="AoU Long-Read SV Detection Pipeline",
                 definitionZip=zip_bytes,
                 parameterTemplate=parameter_template,
+                main="main.wdl",
+                storageType="DYNAMIC",
             )
+            workflow_id = resp["id"]
 
     print(
         json.dumps(

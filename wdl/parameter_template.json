@@ -79,6 +79,10 @@
     "description": "Override Hifiasm_Assemble local SSD in GB. Default 1500 (D12).",
     "optional": true
   },
+  "hifiasm_bloom_filter_bits": {
+    "description": "Hifiasm bloom filter size exponent. Use 37 (default) for whole-genome (~16 GB bloom table, faster). Use 0 for chr20/small inputs (disables bloom filter, lower memory). See hifiasm docs for details.",
+    "optional": true
+  },
   "pav_cpu": {
     "description": "Override PAV_Run vCPU count. Default 32; PAV parallelises per-contig inside the task via Snakemake (Design D14).",
     "optional": true

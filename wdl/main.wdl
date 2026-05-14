@@ -125,6 +125,7 @@ workflow aouLongReadSvPipeline {
         Int?    hifiasm_cpu
         Int?    hifiasm_memory_gb
         Int?    hifiasm_disk_gb
+        Int?    hifiasm_bloom_filter_bits
 
         Int?    pav_cpu
         Int?    pav_memory_gb
@@ -257,6 +258,7 @@ workflow aouLongReadSvPipeline {
             input:
                 hifi_reads_bam = hifi_reads_bam,
                 sample_id      = sample_id,
+                bloom_filter_bits = select_first([hifiasm_bloom_filter_bits, 37]),
                 cpu            = select_first([hifiasm_cpu, 16]),
                 memory_gb      = select_first([hifiasm_memory_gb, 32]),
                 disk_gb        = select_first([hifiasm_disk_gb, 500])

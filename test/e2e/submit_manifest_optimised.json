@@ -20,6 +20,7 @@
   "hifiasm_cpu": 16,
   "hifiasm_memory_gb": 32,
   "hifiasm_disk_gb": 200,
+  "hifiasm_bloom_filter_bits": 0,
 
   "pav_cpu": 16,
   "pav_memory_gb": 64,

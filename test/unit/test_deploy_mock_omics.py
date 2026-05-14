@@ -145,9 +145,10 @@ def test_create_workflow_called_once():
 
 
 @mock.patch.object(deploy, "validate_wdl", lambda p: None)
+@mock.patch("time.sleep", lambda _: None)
 def test_update_when_force():
-    """Matching name in list_workflows + --force -> one update_workflow,
-    zero create_workflow."""
+    """Matching name in list_workflows + --force -> delete old workflow,
+    then create a new one (delete+recreate strategy)."""
     existing = {"id": "wfl-EXISTING", "name": "test-wf"}
     omics = _make_fake_omics(list_pages=[{"items": [existing]}])
     with mock.patch("boto3.client", _boto3_factory(omics)):
@@ -162,14 +163,18 @@ def test_update_when_force():
         )
 
     assert rc == 0
-    assert omics.update_workflow.call_count == 1, (
-        f"expected exactly one update_workflow call, got "
-        f"{omics.update_workflow.call_count}"
+    # Should delete the old workflow then create a new one
+    assert omics.delete_workflow.call_count == 1, (
+        f"expected exactly one delete_workflow call, got "
+        f"{omics.delete_workflow.call_count}"
     )
-    assert omics.create_workflow.call_count == 0
+    assert omics.delete_workflow.call_args.kwargs["id"] == "wfl-EXISTING"
+    assert omics.create_workflow.call_count == 1, (
+        f"expected exactly one create_workflow call, got "
+        f"{omics.create_workflow.call_count}"
+    )
 
-    kwargs = omics.update_workflow.call_args.kwargs
-    assert kwargs["id"] == "wfl-EXISTING"
+    kwargs = omics.create_workflow.call_args.kwargs
     assert kwargs["name"] == "test-wf"
     assert isinstance(kwargs["definitionZip"], bytes) and kwargs["definitionZip"]
     assert isinstance(kwargs["parameterTemplate"], dict) and kwargs["parameterTemplate"]

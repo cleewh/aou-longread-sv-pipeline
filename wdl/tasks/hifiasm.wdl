@@ -42,11 +42,15 @@ task Hifiasm_Assemble {
     input {
         File   hifi_reads_bam
         String sample_id
-        # chr20-only sizing. With `-f 0` hifiasm's peak RSS is ~6 GB
-        # on HG002 chr20, so we ask for 32 GB to leave headroom for
-        # FASTQ conversion buffers. Whole-genome operators must bump
-        # this via `hifiasm_memory_gb` — see SOURCES.md
-        # `## Whole-genome sizing caveat`.
+        # Bloom filter bits for hifiasm k-mer counting.
+        # -f 0:  disables bloom filter, uses hash directly. Best for
+        #        chr20-sized inputs (~6 GB peak RSS). Avoids OOM on
+        #        small inputs where the 16 GB bloom table is wasteful.
+        # -f 37: pre-allocates a 2^37 entry (~16 GB) bloom filter sized
+        #        for a full human genome. Faster for WGS because it
+        #        efficiently pre-screens low-frequency k-mers.
+        # Default is 37 (whole-genome). Set to 0 for chr20/subsets.
+        Int    bloom_filter_bits = 37
         Int    cpu       = 16
         Int    memory_gb = 32
         Int    disk_gb   = 500
@@ -78,16 +82,10 @@ task Hifiasm_Assemble {
         # `-o <prefix>` writes all outputs with the given prefix.
         # `-t ~{cpu}` matches the allocated CPU count so hifiasm does not
         # over- or under-subscribe.
-        # `-f 0` disables the bloom filter. Hifiasm's default `-f 37`
-        # pre-allocates a 16 GB k-mer bloom table sized for a whole
-        # human genome; on chr20-only inputs this over-allocates and
-        # the OOM killer takes the process down silently in HealthOmics.
-        # `-f 0` uses a hash directly — slower for whole-genome, but
-        # for chr20-sized inputs peak RSS drops from >100 GB to ~6 GB
-        # and throughput improves. Whole-genome operators MUST supply
-        # `-f 37` via `hifiasm_extra_args` when the workflow is run
-        # against a full-genome BAM.
-        hifiasm -o ~{sample_id} -t ~{cpu} -f 0 reads.fq
+        # `-f ~{bloom_filter_bits}` controls the bloom filter size:
+        #   -f 37 (default): 16 GB bloom filter, optimal for WGS
+        #   -f 0: no bloom filter, optimal for chr20/small inputs
+        hifiasm -o ~{sample_id} -t ~{cpu} -f ~{bloom_filter_bits} reads.fq
 
         # --- GFA -> bgzipped FASTA ------------------------------------------
         # hifiasm's primary haplotype output files are named

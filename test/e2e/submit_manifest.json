@@ -10,6 +10,7 @@
   "run_sniffles2": true,
   "run_pbsv": true,
   "shard_by_chromosome": true,
+  "hifiasm_bloom_filter_bits": 0,
   "run_storage_type": "STATIC",
   "storage_capacity": 4800,
   "enable_run_cache": true,

@@ -1,0 +1,47 @@
+{
+  "aws_account_id": "687677765589",
+  "sample_id": "HG002_wgs",
+  "hifi_reads_bam": "s3://aou-longread-sv-687677765589-ap-southeast-1/test/wgs/HG002.wgs.hifi.bam",
+  "hifi_reads_bai": "s3://aou-longread-sv-687677765589-ap-southeast-1/test/wgs/HG002.wgs.hifi.bam.bai",
+  "hifi_reads_aligned": true,
+  "reference_fasta": "s3://aou-longread-sv-687677765589-ap-southeast-1/test/e2e/GRCh38.primary.fa",
+  "reference_fai": "s3://aou-longread-sv-687677765589-ap-southeast-1/test/e2e/GRCh38.primary.fa.fai",
+  "output_prefix": "s3://aou-longread-sv-687677765589-ap-southeast-1/test/wgs/outputs/HG002_wgs_optimised/",
+  "run_hifiasm_pav": true,
+  "run_sniffles2": true,
+  "run_pbsv": true,
+  "shard_by_chromosome": true,
+  "run_storage_type": "DYNAMIC",
+  "enable_run_cache": true,
+  "input_manifest_json": "s3://aou-longread-sv-687677765589-ap-southeast-1/test/wgs/submit_manifest_wgs_optimised.json",
+
+  "_comment_optimisations": "Whole-genome optimised: right-sized resources + DYNAMIC storage",
+
+  "hifiasm_cpu": 32,
+  "hifiasm_memory_gb": 96,
+  "hifiasm_disk_gb": 1500,
+
+  "pav_cpu": 32,
+  "pav_memory_gb": 128,
+  "pav_disk_gb": 2000,
+
+  "sniffles2_cpu": 8,
+  "sniffles2_memory_gb": 32,
+  "sniffles2_disk_gb": 500,
+
+  "sniffles2_merge_cpu": 4,
+  "sniffles2_merge_memory_gb": 16,
+  "sniffles2_merge_disk_gb": 200,
+
+  "pbsv_discover_cpu": 4,
+  "pbsv_discover_memory_gb": 16,
+  "pbsv_discover_disk_gb": 500,
+
+  "pbsv_call_cpu": 8,
+  "pbsv_call_memory_gb": 64,
+  "pbsv_call_disk_gb": 500,
+
+  "harmoniser_cpu": 8,
+  "harmoniser_memory_gb": 32,
+  "harmoniser_disk_gb": 200
+}

@@ -18,8 +18,33 @@ import yaml
 REPO = Path(__file__).resolve().parent.parent
 MANIFEST = REPO / "containers" / "manifest.yaml"
 WDL_DIR = REPO / "wdl"
-ACCOUNT_ID = "687677765589"
-REGION = "ap-southeast-1"
+
+# Read account ID and region from .healthomics/config.toml if available,
+# otherwise fall back to environment / AWS CLI defaults.
+def _read_config():
+    config_path = REPO / ".healthomics" / "config.toml"
+    account_id = None
+    region = None
+    if config_path.exists():
+        for line in config_path.read_text().splitlines():
+            if line.startswith("account_id"):
+                account_id = line.split("=", 1)[1].strip().strip('"')
+            elif line.startswith("region"):
+                region = line.split("=", 1)[1].strip().strip('"')
+    if not account_id:
+        import subprocess
+        account_id = subprocess.check_output(
+            ["aws", "sts", "get-caller-identity", "--query", "Account", "--output", "text"],
+            text=True
+        ).strip()
+    if not region:
+        import os, subprocess
+        region = os.environ.get("AWS_DEFAULT_REGION") or subprocess.check_output(
+            ["aws", "configure", "get", "region"], text=True
+        ).strip() or "us-east-1"
+    return account_id, region
+
+ACCOUNT_ID, REGION = _read_config()
 REGISTRY = f"{ACCOUNT_ID}.dkr.ecr.{REGION}.amazonaws.com"
 
 # Map tool name → WDL task files that reference it. This is a narrow helper;

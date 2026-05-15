@@ -42,7 +42,7 @@ import yaml
 # Constants
 # ---------------------------------------------------------------------------
 
-DEFAULT_REGION = "ap-southeast-1"
+DEFAULT_REGION = None  # Uses AWS CLI configured region
 DEFAULT_MANIFEST_REL = "containers/manifest.yaml"
 DEFAULT_SOURCES_REL = "SOURCES.md"
 DEFAULT_HEALTHOMICS_CONFIG_REL = ".healthomics/config.toml"

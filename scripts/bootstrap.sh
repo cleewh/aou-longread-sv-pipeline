@@ -5,7 +5,7 @@
 #   - AWS CLI v2 configured with credentials (admin or equivalent)
 #   - Docker with buildx (for multi-arch image builds)
 #   - Python 3.11+ with pip
-#   - Region: ap-southeast-1 (hardcoded per pipeline design)
+#   - Region: uses AWS CLI configured region (or AWS_DEFAULT_REGION env var)
 #
 # Usage:
 #   ./scripts/bootstrap.sh --account-id <YOUR_AWS_ACCOUNT_ID>
@@ -27,7 +27,7 @@
 
 set -euo pipefail
 
-REGION="ap-southeast-1"
+REGION="${AWS_DEFAULT_REGION:-$(aws configure get region 2>/dev/null || echo "us-east-1")}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(dirname "$SCRIPT_DIR")"
 

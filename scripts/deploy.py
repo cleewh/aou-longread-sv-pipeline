@@ -37,7 +37,7 @@ from pathlib import Path
 from typing import Iterable, Sequence
 
 
-DEFAULT_REGION = "ap-southeast-1"
+DEFAULT_REGION = None  # Uses AWS CLI configured region
 DEFAULT_WORKFLOW_NAME = "aou-longread-sv-pipeline"
 
 

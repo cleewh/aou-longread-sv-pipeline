@@ -32,7 +32,7 @@ from stage_test_data.upload import (  # noqa: E402
 )
 
 
-DEFAULT_REGION = "ap-southeast-1"
+DEFAULT_REGION = None  # Uses AWS CLI configured region
 _REPO_ROOT = _SCRIPTS_DIR.parent
 _DEFAULT_INPUTS_JSON = _REPO_ROOT / "test" / "e2e" / "inputs.json"
 

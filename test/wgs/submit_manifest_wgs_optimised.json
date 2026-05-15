@@ -17,7 +17,7 @@
 
   "_comment_optimisations": "Whole-genome optimised: right-sized resources + DYNAMIC storage",
 
-  "hifiasm_cpu": 32,
+  "hifiasm_cpu": 64,
   "hifiasm_memory_gb": 256,
   "hifiasm_disk_gb": 1500,
   "hifiasm_bloom_filter_bits": 37,

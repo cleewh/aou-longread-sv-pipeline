@@ -30,6 +30,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import subprocess
 import sys
 from pathlib import Path
 
@@ -55,10 +56,10 @@ from submit_run.resources import TASK_DEFAULTS, resolve_task  # noqa: E402
 from submit_run.shard_planner import plan_shards  # noqa: E402
 
 
-DEFAULT_REGION = "ap-southeast-1"
+DEFAULT_REGION = None  # Uses AWS CLI configured region
 _REPO_ROOT = _SCRIPTS_DIR.parent
 _DEFAULT_CONTAINERS_MANIFEST = _REPO_ROOT / "containers" / "manifest.yaml"
-_DEFAULT_PRICE_LIST = _REPO_ROOT / "pricing" / "healthomics-ap-southeast-1.json"
+_DEFAULT_PRICE_LIST = None  # Resolved dynamically based on region
 
 
 def _build_arg_parser() -> argparse.ArgumentParser:
@@ -89,7 +90,7 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     p.add_argument(
         "--region",
         default=DEFAULT_REGION,
-        help=f"AWS region (default {DEFAULT_REGION}); SDK region defaults here when unset.",
+        help="AWS region; defaults to AWS CLI configured region.",
     )
     p.add_argument(
         "--containers-manifest",
@@ -101,7 +102,7 @@ def _build_arg_parser() -> argparse.ArgumentParser:
         "--price-list",
         type=Path,
         default=_DEFAULT_PRICE_LIST,
-        help="Path to the HealthOmics ap-southeast-1 price list JSON.",
+        help="Path to the HealthOmics price list JSON. Defaults to pricing/healthomics-<region>.json.",
     )
     p.add_argument(
         "--fai",
@@ -122,9 +123,9 @@ def _build_arg_parser() -> argparse.ArgumentParser:
 
 
 def _image_uris_from_manifest(
-    containers_manifest_path: Path, account_id: str
+    containers_manifest_path: Path, account_id: str, region: str
 ) -> list[str]:
-    """Build the list of canonical ap-southeast-1 ECR URIs from containers/manifest.yaml.
+    """Build the list of canonical ECR URIs from containers/manifest.yaml.
 
     The manifest stores one entry per tool with ``platforms`` and
     ``digest_<platform>`` fields. We build one URI per listed platform using
@@ -155,7 +156,7 @@ def _image_uris_from_manifest(
             if digest.startswith("sha256:") and len(digest) != len("sha256:") + 64:
                 digest = "sha256:" + "0" * 64
             uris.append(
-                f"{account_id}.dkr.ecr.ap-southeast-1.amazonaws.com/{repo}@{digest}"
+                f"{account_id}.dkr.ecr.{region}.amazonaws.com/{repo}@{digest}"
             )
     return uris
 
@@ -205,12 +206,24 @@ def _shard_report(fai_path: Path | None, shard_by_chromosome: bool) -> dict | No
 def main(argv: list[str] | None = None) -> int:
     args = _build_arg_parser().parse_args(argv)
 
-    # Requirement 17.7 / Design D10: the SDK region defaults to ap-southeast-1
-    # when unset by the operator. Set both env vars boto3 consults.
+    # Resolve region: CLI flag > env var > AWS config
+    if args.region is None:
+        args.region = (
+            os.environ.get("AWS_DEFAULT_REGION")
+            or os.environ.get("AWS_REGION")
+            or subprocess.check_output(
+                ["aws", "configure", "get", "region"], text=True
+            ).strip()
+            or "us-east-1"
+        )
     if not os.environ.get("AWS_DEFAULT_REGION"):
         os.environ["AWS_DEFAULT_REGION"] = args.region
     if not os.environ.get("AWS_REGION"):
         os.environ["AWS_REGION"] = args.region
+
+    # Resolve price list path if not explicitly provided
+    if args.price_list is None:
+        args.price_list = _REPO_ROOT / "pricing" / f"healthomics-{args.region}.json"
 
     manifest: dict = json.loads(args.manifest.read_text(encoding="utf-8"))
     account_id = str(manifest.get("aws_account_id", "000000000000"))
@@ -227,7 +240,7 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     s3 = boto3.client("s3", region_name=args.region)
     try:
-        check_region_residency(manifest, s3)
+        check_region_residency(manifest, s3, args.region)
         checks["region_residency"] = "OK"
     except RegionResidencyError as exc:
         checks["region_residency"] = f"FAIL: {exc}"
@@ -237,8 +250,8 @@ def main(argv: list[str] | None = None) -> int:
 
     # --- 2) ECR residency ----------------------------------------------------
     try:
-        image_uris = _image_uris_from_manifest(args.containers_manifest, account_id)
-        check_ecr_residency(image_uris)
+        image_uris = _image_uris_from_manifest(args.containers_manifest, account_id, args.region)
+        check_ecr_residency(image_uris, args.region)
         checks["ecr_residency"] = f"OK ({len(image_uris)} images)"
     except (EcrResidencyError, FileNotFoundError) as exc:
         checks["ecr_residency"] = f"FAIL: {exc}"

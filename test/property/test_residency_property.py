@@ -20,13 +20,15 @@ import pytest
 from hypothesis import assume, given, settings, strategies as st
 
 from submit_run.residency import (  # noqa: E402 — sys.path patched by test/conftest.py
-    AP_SE_1,
-    ECR_URI_RE,
+    _build_ecr_regex,
+
     EcrResidencyError,
     RegionResidencyError,
     check_ecr_residency,
     check_region_residency,
 )
+
+TEST_REGION = "ap-southeast-1"  # Test fixture region
 
 
 # ---------------------------------------------------------------------------
@@ -126,9 +128,9 @@ def test_all_in_region_passes(fields, buckets):
         )
         for field, bucket in zip(fields, buckets)
     }
-    client = FakeS3Client({b: AP_SE_1 for b in buckets})
+    client = FakeS3Client({b: TEST_REGION for b in buckets})
     # Should not raise.
-    assert check_region_residency(manifest, client) is None
+    assert check_region_residency(manifest, client, TEST_REGION) is None
 
 
 @pytest.mark.property_test
@@ -138,18 +140,18 @@ def test_offending_bucket_named_in_error(data):
     """When any bucket is out of region, the error names a bucket+region mismatch."""
     manifest, bucket_map = data
     has_offender = any(
-        region != AP_SE_1 for region in bucket_map.values()
+        region != TEST_REGION for region in bucket_map.values()
     )
     client = FakeS3Client(bucket_map)
     if not has_offender:
-        assert check_region_residency(manifest, client) is None
+        assert check_region_residency(manifest, client, TEST_REGION) is None
         return
     with pytest.raises(RegionResidencyError) as excinfo:
-        check_region_residency(manifest, client)
+        check_region_residency(manifest, client, TEST_REGION)
     message = str(excinfo.value)
     # At least one offending bucket AND its reported region must appear in
     # the message (Property 9 "name at least one offending bucket").
-    offenders = [(b, r) for b, r in bucket_map.items() if r != AP_SE_1]
+    offenders = [(b, r) for b, r in bucket_map.items() if r != TEST_REGION]
     assert any(
         b in message and (r or "us-east-1") in message for (b, r) in offenders
     ), (
@@ -197,8 +199,8 @@ def bad_ecr_uri(draw):
 def test_check_ecr_residency_accepts_ap_southeast_1(uris):
     """URIs that match the ap-southeast-1 ECR shape are accepted."""
     # Every URI should match the implementation regex first (sanity).
-    assert all(ECR_URI_RE.match(u) for u in uris)
-    assert check_ecr_residency(uris) is None
+    assert all(_build_ecr_regex(TEST_REGION).match(u) for u in uris)
+    assert check_ecr_residency(uris, TEST_REGION) is None
 
 
 @pytest.mark.property_test
@@ -212,5 +214,5 @@ def test_check_ecr_residency_rejects_other_regions(pre, bad, post):
     """A URI in any other region anywhere in the list triggers rejection."""
     uris = [*pre, bad, *post]
     with pytest.raises(EcrResidencyError) as excinfo:
-        check_ecr_residency(uris)
+        check_ecr_residency(uris, TEST_REGION)
     assert bad in str(excinfo.value)

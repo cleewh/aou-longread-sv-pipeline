@@ -10,9 +10,9 @@ Two gates live here:
 * :func:`check_region_residency` — calls ``s3:GetBucketLocation`` for every S3
   URI referenced by an Input_Manifest and raises :class:`RegionResidencyError`
   naming the offending bucket and its reported region when any bucket lives
-  outside ``ap-southeast-1``.
+  outside the configured target region.
 * :func:`check_ecr_residency` — matches each image URI against the
-  ``ap-southeast-1`` ECR regex (Property 6 shape) and raises
+  target region ECR regex (Property 6 shape) and raises
   :class:`EcrResidencyError` when a URI refers to another region or another
   registry.
 
@@ -28,29 +28,25 @@ from typing import Iterable, Mapping
 from urllib.parse import urlparse
 
 
-AP_SE_1 = "ap-southeast-1"
-
-# Property 6 shape: 12-digit account id, literal ap-southeast-1 ECR host, a
-# repository path, and an optional ``@sha256:...`` digest. Digest-pinning is
-# enforced by Property 6 at the WDL level; this regex permits an un-pinned URI
-# (tag-only or no reference) because :func:`check_ecr_residency` is about
-# *residency* of the ECR host, not about pinning.
-ECR_URI_RE = re.compile(
-    r"^(?P<account>\d{12})\.dkr\.ecr\.ap-southeast-1\.amazonaws\.com/"
-    r"(?P<repo>[a-z0-9][a-z0-9/_.-]*)"
-    r"(?:"
-    r"(?::(?P<tag>[A-Za-z0-9_.-]+))?"
-    r"(?:@sha256:(?P<digest>[0-9a-f]{64}))?"
-    r")$"
-)
+def _build_ecr_regex(region: str) -> re.Pattern:
+    """Build an ECR URI regex for the given region."""
+    escaped_region = re.escape(region)
+    return re.compile(
+        rf"^(?P<account>\d{{12}})\.dkr\.ecr\.{escaped_region}\.amazonaws\.com/"
+        r"(?P<repo>[a-z0-9][a-z0-9/_.-]*)"
+        r"(?:"
+        r"(?::(?P<tag>[A-Za-z0-9_.-]+))?"
+        r"(?:@sha256:(?P<digest>[0-9a-f]{64}))?"
+        r")$"
+    )
 
 
 class RegionResidencyError(Exception):
-    """Raised when any S3 bucket referenced by a manifest lives outside ap-southeast-1."""
+    """Raised when any S3 bucket referenced by a manifest lives outside the target region."""
 
 
 class EcrResidencyError(Exception):
-    """Raised when any container image URI is not hosted in the ap-southeast-1 ECR."""
+    """Raised when any container image URI is not hosted in the target region ECR."""
 
 
 # Fields in an Input_Manifest that can carry an ``s3://bucket/key`` URI and so
@@ -105,8 +101,8 @@ def _resolve_region(response: Mapping[str, object]) -> str:
     return constraint
 
 
-def check_region_residency(manifest: Mapping[str, object], s3_client) -> None:
-    """Raise ``RegionResidencyError`` if any S3 URI in *manifest* is outside ap-southeast-1.
+def check_region_residency(manifest: Mapping[str, object], s3_client, target_region: str) -> None:
+    """Raise ``RegionResidencyError`` if any S3 URI in *manifest* is outside the target region.
 
     Iterates over :data:`_S3_URI_FIELDS`, skipping missing/null values, and
     calls ``s3_client.get_bucket_location`` once per unique bucket (repeated
@@ -128,26 +124,28 @@ def check_region_residency(manifest: Mapping[str, object], s3_client) -> None:
             resp = s3_client.get_bucket_location(Bucket=bucket)
             region = _resolve_region(resp)
             cache[bucket] = region
-        if region != AP_SE_1:
+        if region != target_region:
             raise RegionResidencyError(
                 f"Bucket {bucket!r} referenced by manifest field {field!r} "
-                f"is in region {region!r}, required {AP_SE_1!r}"
+                f"is in region {region!r}, required {target_region!r}"
             )
 
 
-def check_ecr_residency(image_uris: Iterable[str]) -> None:
-    """Raise ``EcrResidencyError`` when any URI in *image_uris* is not in ap-southeast-1 ECR.
+def check_ecr_residency(image_uris: Iterable[str], target_region: str) -> None:
+    """Raise ``EcrResidencyError`` when any URI in *image_uris* is not in the target region ECR.
 
-    Each URI is matched against :data:`ECR_URI_RE`. The canonical form is
-    ``<account>.dkr.ecr.ap-southeast-1.amazonaws.com/<repo>[:tag][@sha256:...]``.
+    Each URI is matched against a dynamically built ECR regex for the target region.
+    The canonical form is
+    ``<account>.dkr.ecr.<region>.amazonaws.com/<repo>[:tag][@sha256:...]``.
 
     Rejection is eager (first mismatch raises); the message names the offending
     URI and the expected regex so an operator can spot typos in
     ``containers/manifest.yaml`` quickly.
     """
+    ecr_re = _build_ecr_regex(target_region)
     for uri in image_uris:
-        if not isinstance(uri, str) or not ECR_URI_RE.match(uri):
+        if not isinstance(uri, str) or not ecr_re.match(uri):
             raise EcrResidencyError(
-                f"Image URI {uri!r} is not hosted in ap-southeast-1 ECR "
-                f"(expected match against {ECR_URI_RE.pattern!r})"
+                f"Image URI {uri!r} is not hosted in {target_region} ECR "
+                f"(expected match against {ecr_re.pattern!r})"
             )

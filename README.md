@@ -1,12 +1,12 @@
 # AoU Long-Read SV Detection Pipeline on AWS HealthOmics
 
 This repository ports the Broad Institute All of Us (AoU) Phase 1
-long-read structural-variant (SV) detection stack to AWS HealthOmics in
-the Singapore region (`ap-southeast-1`). Input is a single PacBio HiFi
-sample (unaligned or aligned BAM). Output is a harmonised SV VCF plus
-per-caller VCFs produced by the three complementary callers described
-in the AoU paper (Mahmoud et al. 2023, *"Utility of long-read sequencing
-for All of Us"*, bioRxiv 2023.01.23.525236):
+long-read structural-variant (SV) detection stack to AWS HealthOmics.
+Input is a single PacBio HiFi sample (unaligned or aligned BAM). Output
+is a harmonised SV VCF plus per-caller VCFs produced by the three
+complementary callers described in the AoU paper (Mahmoud et al. 2023,
+*"Utility of long-read sequencing for All of Us"*, bioRxiv
+2023.01.23.525236):
 
 - **Assembly-based:** Hifiasm → PAV → PAV2SVs filter.
 - **Read-based:** Sniffles2.
@@ -22,125 +22,111 @@ Version: see [`VERSION`](./VERSION). License: BSD-3-Clause (see
 
 ## Region and data residency
 
-This deployment is pinned to `ap-southeast-1` (Singapore) per
-[Requirement 10](./.kiro/specs/aou-longread-sv-pipeline/requirements.md).
-Concretely:
+The pipeline is region-agnostic — it uses your AWS CLI configured region
+by default. All scripts (`bootstrap.sh`, `deploy.py`, `submit-run.py`,
+`mirror-images.py`) resolve the region from your environment
+(`AWS_DEFAULT_REGION`, `aws configure get region`, or `--region` flag).
 
-- The HealthOmics workflow resource is created in `ap-southeast-1` by
-  `scripts/deploy.py`.
-- `scripts/submit-run.py` fails submission with `RegionResidencyError`
-  when any S3 URI in the Input_Manifest resolves to a bucket outside
-  `ap-southeast-1`, and fails with `EcrResidencyError` when any
-  referenced ECR image URI is not in the `ap-southeast-1` registry.
-- Container images are mirrored into the `ap-southeast-1` ECR by
-  `scripts/mirror-images.py`; the WDL never pulls from a cross-region
-  registry.
+The residency checks in `submit-run.py` validate that all S3 buckets and
+ECR image URIs are in the same region as the target deployment. This
+ensures data never crosses region boundaries during a run.
 
-Operators running in a different region must fork the pipeline,
-refresh `pricing/healthomics-ap-southeast-1.json` with the target
-region's rate card, and update the `ap-southeast-1` checks in
-`scripts/submit_run/residency.py`. No cross-region deployment is
-supported out of the box.
+To deploy in a specific region:
+
+```bash
+export AWS_DEFAULT_REGION=ap-southeast-1  # or us-east-1, eu-west-1, etc.
+./scripts/bootstrap.sh --account-id <YOUR_ACCOUNT_ID>
+```
 
 ## Quick start
 
 ### 1. Prerequisites
 
-- An AWS account in `ap-southeast-1` with AWS HealthOmics enabled.
-- An S3 bucket in `ap-southeast-1` to hold inputs and outputs.
-- An IAM execution role for HealthOmics, rendered from
-  [`iam/execution_role_trust.json`](./iam/execution_role_trust.json) +
-  [`iam/execution_role_policy.json.tmpl`](./iam/execution_role_policy.json.tmpl)
-  via [`iam/render.py`](./iam/render.py). Capture its ARN.
-- Local tools: Python 3.11+, Docker with `buildx`, `miniwdl`, `boto3`,
-  `jsonschema`, `PyYAML`, `pytest`, `hypothesis`, `cfn-lint`.
-  `pip install -e '.[dev]'` installs every dev dependency.
+- An AWS account with AWS HealthOmics enabled in your target region.
+- AWS CLI v2 configured with credentials and default region.
+- Docker with `buildx` (for multi-arch image builds).
+- Python 3.11+ with pip.
 
-### 2. Stage the test dataset
-
-`scripts/stage-test-data.py` walks `test/e2e/inputs.json` and uploads
-the HG002 chr20 HiFi BAM, the GRCh38 no-alt reference, and the GIAB
-v0.6 Tier-1 SV truth set to the target bucket. It skips objects already
-present with matching size + SHA-256, so the command is idempotent.
+### 2. One-command bootstrap
 
 ```bash
-python3 scripts/stage-test-data.py --bucket aou-longread-sv-<account-id>-ap-southeast-1
+./scripts/bootstrap.sh --account-id <YOUR_AWS_ACCOUNT_ID>
 ```
 
-### 3. Build and push container images
+This creates the S3 bucket, IAM role, builds and pushes all 8 container
+images to ECR, sets ECR policies, deploys the WDL workflow, and prints
+the workflow ID and role ARN.
 
-```bash
-python3 scripts/mirror-images.py --account-id <your-account-id>
-```
-
-Multi-arch images (Graviton + x86_64 where upstream supports arm64)
-are pushed to `ap-southeast-1` ECR and their per-platform digests are
-written back to `containers/manifest.yaml` and appended to the
-`## Image digests` section of [`SOURCES.md`](./SOURCES.md).
-
-### 4. Deploy the workflow
-
-```bash
-python3 scripts/deploy.py --region ap-southeast-1
-```
-
-This runs `miniwdl check wdl/main.wdl`, zips `wdl/`, and calls
-`aws omics create-workflow` in `ap-southeast-1`. When `--force` is
-passed and a same-name workflow already exists, the old workflow is
-deleted and a fresh one is created. The workflow ID is printed on
-success.
-
-### 5. Submit a run
+### 3. Submit a run
 
 ```bash
 python3 scripts/submit-run.py \
     --manifest path/to/my_manifest.json \
-    --workflow-id wfl-xxxxxxxx \
-    --role-arn arn:aws:iam::<account-id>:role/AouLongReadSvExecutionRole \
-    --region ap-southeast-1
+    --workflow-id <workflow_id_from_bootstrap> \
+    --role-arn <role_arn_from_bootstrap>
 ```
 
-`submit-run.py` composes the full pre-flight pipeline: residency
-checks, Input_Manifest schema validation, resource override resolution
-(Property 11), chromosome shard planning (Property 18), and cost-optimal
-instance selection (Property 15). `--dry-run` prints every check and
-exits without calling `StartRun`.
+`submit-run.py` runs pre-flight checks: residency validation,
+Input_Manifest schema validation, resource override resolution, chromosome
+shard planning, and cost-optimal instance selection. `--dry-run` prints
+every check and exits without calling `StartRun`.
 
-### 6. Run the end-to-end smoke test
+See `test/wgs/submit_manifest_wgs_optimised.json` for the recommended
+whole-genome manifest and `test/e2e/submit_manifest_optimised.json` for
+chr20 testing.
 
-```bash
-python3 test/e2e/run_e2e.py \
-    --bucket aou-longread-sv-<account-id>-ap-southeast-1 \
-    --workflow-id wfl-xxxxxxxx \
-    --role-arn arn:aws:iam::<account-id>:role/AouLongReadSvExecutionRole
-```
+## Benchmarks (GIAB HG002, 30× HiFi, ap-southeast-1)
 
-`run_e2e.py` submits the HG002 chr20 smoke run, polls until terminal
-state (failing with `WallClockExceeded` at 6 h per Req 14.9), checks
-output layout, SV record counts, per-caller status, and Truvari recall
-and precision against GIAB v0.6. Detailed procedure:
-[`test/e2e/README.md`](./test/e2e/README.md).
+Tested on GIAB HG002 PacBio CCS 15kb+20kb merged BAM (~36× effective
+coverage, 111.6 GiB) from the public Genome in a Bottle consortium
+bucket.
+
+### Hifiasm assembly scaling
+
+| vCPUs | Memory | Instance | Runtime |
+|-------|--------|----------|---------|
+| 32 | 256 GB | omics.r.8xlarge | 23.8h |
+| 64 | 256 GB | omics.r.16xlarge | 9.3h |
+| 96 | 384 GB | omics.m.24xlarge | 9.1h |
+
+**Recommendation: 64 vCPU.** No meaningful improvement beyond 64 cores
+due to serial bottlenecks in the assembly algorithm.
+
+### Recommended whole-genome configuration
+
+| Task | vCPUs | Memory | Expected runtime |
+|------|-------|--------|-----------------|
+| Hifiasm | 64 | 256 GB | ~9h |
+| PAV | 48 | 128 GB | ~3-4h |
+| Sniffles2 (per shard) | 8 | 32 GB | ~5-9 min |
+| PBSV discover (per shard) | 4 | 16 GB | ~5-11 min |
+| PBSV call | 8 | 64 GB | ~54 min |
+| Harmoniser | 8 | 32 GB | ~5 min |
+
+**Total end-to-end runtime:** ~13-15 hours per sample.
+
+### Cost-saving option
+
+Set `run_hifiasm_pav: false` to skip the assembly-based caller. This
+reduces cost by ~70% (hifiasm + PAV dominate the bill) at the expense
+of losing ~400 SVs per sample that only assembly-based calling detects.
 
 ## Submit via `aws omics start-run` directly
 
-Per Requirement 13.4, the pipeline is also submittable via the AWS CLI
-directly — useful for smoke-testing the workflow definition without the
-Python gating in `submit-run.py`. The exact command is:
+The pipeline is also submittable via the AWS CLI directly:
 
 ```bash
 aws omics start-run \
-    --workflow-id wfl-xxxxxxxx \
-    --role-arn arn:aws:iam::<account-id>:role/AouLongReadSvExecutionRole \
-    --name aou-sv-HG002-chr20 \
+    --workflow-id <workflow_id> \
+    --role-arn <role_arn> \
+    --name aou-sv-<sample_id> \
     --parameters file://my_manifest.json \
-    --storage-type DYNAMIC \
-    --region ap-southeast-1
+    --storage-type DYNAMIC
 ```
 
-Direct `aws omics start-run` invocations bypass the client-side
-region-residency gate (Design D10). Operators who take this path are
-responsible for confirming that every S3 URI and ECR URI referenced by
-their manifest is in `ap-southeast-1`.
+Direct invocations bypass the client-side residency gate. Operators who
+take this path are responsible for confirming that every S3 URI and ECR
+URI referenced by their manifest is in the same region as the workflow.
 
 ## Input_Manifest reference
 
@@ -200,36 +186,19 @@ and stderr per Req 12.1.
 
 ## Cost model
 
-The pipeline targets minimum HealthOmics spend by default per
-Requirement 17:
+The pipeline targets minimum HealthOmics spend:
 
-- **DYNAMIC run storage** is the default (`run_storage_type`). Storage
-  is billed per GB-hour actually consumed; large intermediates are
-  reclaimed as soon as a downstream task finishes (Design D6).
-- **Cost-optimal instance selection** (Property 15): each task's
-  declared `cpu` / `memory_gb` / `disk_gb` request is fulfilled by the
-  smallest `ap-southeast-1` HealthOmics instance family that satisfies
-  all three bounds, using the embedded price list
-  [`pricing/healthomics-ap-southeast-1.json`](./pricing/healthomics-ap-southeast-1.json)
-  (Design D9).
+- **DYNAMIC run storage** — billed per GB-hour actually consumed.
+- **Cost-optimal instance selection** — each task is fulfilled by the
+  smallest instance that satisfies the cpu/memory/disk request.
 - **Graviton images where upstream supports arm64** (hifiasm, pbmm2,
-  sniffles2, pav2svs, harmoniser, metadata-writer). PAV and PBSV are
-  pinned to amd64 because their upstream vendor builds are amd64-only;
-  see the `## Graviton matrix` table in [`SOURCES.md`](./SOURCES.md).
-- **Chromosome sharding** of Sniffles2 and PBSV when
-  `shard_by_chromosome=true` (Design D7, Req 17.8).
-- **Skip-alignment short-circuit** when `hifi_reads_aligned=true`
-  (Req 17.9).
-- **Disabled non-essential options** — see the `## Disabled non-essential
-  options` section in [`SOURCES.md`](./SOURCES.md) for the full list
-  (Req 17.14).
+  sniffles2, pav2svs, harmoniser, metadata-writer).
+- **Chromosome sharding** of Sniffles2 and PBSV for parallelism.
+- **Skip-alignment short-circuit** when `hifi_reads_aligned=true`.
 
 Every run writes a `Cost_Report` block into `<sample_id>.run_metadata.json`
 with per-task instance type, CPU-hours, memory-GB-hours,
-storage-GB-hours, and estimated USD, plus a run-level total (Req 17.10,
-Property 19). `test/e2e/cost_regression.py` warns when the total exceeds
-the committed baseline by more than 20 % and rewrites
-`test/e2e/cost_baseline.json` on warning (Req 17.11, Property 20).
+storage-GB-hours, and estimated USD.
 
 ### Resource overrides
 
@@ -260,18 +229,18 @@ The core pipeline is deployable without this flag.
 ## Limitations
 
 - **PacBio HiFi only.** Oxford Nanopore (ONT) and PacBio CLR reads are
-  not supported; all three callers and the Hifiasm assembler are tuned
-  for HiFi. Non-HiFi BAMs fail at the Hifiasm or Sniffles2 header check.
+  not supported. Non-HiFi BAMs fail at the Hifiasm header check.
 - **Single-sample calling only.** No joint genotyping, no cohort merge.
-  Phase 2 cohort workflows are explicitly out of scope for this repo.
-- **`ap-southeast-1` only.** Other regions require a fork that refreshes
-  the embedded price list, the residency gate, and the ECR registry
-  host; no cross-region deployment is supported out of the box.
+  Phase 2 cohort workflows are out of scope.
+- **GRCh38 only.** Built and tested against GRCh38 primary (no
+  ALTs/decoys). GRCh37 and T2T are not supported.
 - **Whole-genome sizing.** The default `hifiasm_bloom_filter_bits=37`
-  and resource defaults in `wdl/parameter_template.json` are sized for
-  whole-genome 30× HiFi. For chr20 or subset inputs, set
+  is sized for whole-genome 30× HiFi. For chr20 or subset inputs, set
   `hifiasm_bloom_filter_bits=0` and reduce memory/disk accordingly
   (see `test/e2e/submit_manifest_optimised.json` for chr20 sizing).
+- **Max instance size varies by region.** Singapore (ap-southeast-1)
+  supports up to 96 vCPU (24xlarge). US regions (us-east-1, us-west-2)
+  support up to 192 vCPU (48xlarge).
 
 ## References
 

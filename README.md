@@ -81,29 +81,25 @@ Tested on GIAB HG002 PacBio CCS 15kb+20kb merged BAM (~36× effective
 coverage, 111.6 GiB) from the public Genome in a Bottle consortium
 bucket.
 
-### Hifiasm assembly scaling
-
-| vCPUs | Memory | Instance | Runtime |
-|-------|--------|----------|---------|
-| 32 | 256 GB | omics.r.8xlarge | 23.8h |
-| 64 | 256 GB | omics.r.16xlarge | 9.3h |
-| 96 | 384 GB | omics.m.24xlarge | 9.1h |
-
-**Recommendation: 64 vCPU.** No meaningful improvement beyond 64 cores
-due to serial bottlenecks in the assembly algorithm.
-
 ### Recommended whole-genome configuration
 
-| Task | vCPUs | Memory | Expected runtime |
-|------|-------|--------|-----------------|
-| Hifiasm | 64 | 256 GB | ~9h |
-| PAV | 48 | 128 GB | ~3-4h |
-| Sniffles2 (per shard) | 8 | 32 GB | ~5-9 min |
-| PBSV discover (per shard) | 4 | 16 GB | ~5-11 min |
-| PBSV call | 8 | 64 GB | ~54 min |
-| Harmoniser | 8 | 32 GB | ~5 min |
+| Task | vCPUs | Memory | Instance |
+|------|-------|--------|----------|
+| Hifiasm | 64 | 256 GB | omics.r.16xlarge |
+| PAV | 48 | 128 GB | omics.m.12xlarge |
+| Sniffles2 (per shard) | 8 | 32 GB | omics.m.2xlarge |
+| PBSV discover (per shard) | 4 | 16 GB | omics.m.xlarge |
+| PBSV call | 8 | 64 GB | omics.r.2xlarge |
+| Harmoniser | 8 | 32 GB | omics.m.2xlarge |
 
-**Total end-to-end runtime:** ~13-15 hours per sample.
+Hifiasm at 64 vCPU is the optimal configuration — benchmarking showed
+no meaningful improvement at 96 vCPU (9.3h vs 9.1h) due to serial
+bottlenecks in the assembly algorithm.
+
+**Estimated end-to-end runtime:** ~13-15 hours per sample.
+**Estimated cost:** ~$80-85 per sample (compute + dynamic storage).
+
+See `test/wgs/submit_manifest_wgs_optimised.json` for the full manifest.
 
 ### Cost-saving option
 

@@ -86,7 +86,7 @@ bucket.
 | Task | vCPUs | Memory | Instance |
 |------|-------|--------|----------|
 | Hifiasm | 64 | 256 GB | omics.r.16xlarge |
-| PAV | 48 | 128 GB | omics.m.12xlarge |
+| PAV | 32 | 128 GB | omics.m.8xlarge |
 | Sniffles2 (per shard) | 8 | 32 GB | omics.m.2xlarge |
 | PBSV discover (per shard) | 4 | 16 GB | omics.m.xlarge |
 | PBSV call | 8 | 64 GB | omics.r.2xlarge |
@@ -94,10 +94,11 @@ bucket.
 
 Hifiasm at 64 vCPU is the optimal configuration — benchmarking showed
 no meaningful improvement at 96 vCPU (9.3h vs 9.1h) due to serial
-bottlenecks in the assembly algorithm.
+bottlenecks in the assembly algorithm. PAV performs best at 32 vCPU —
+higher core counts do not improve throughput due to I/O bottlenecks.
 
-**Estimated end-to-end runtime:** ~13-15 hours per sample.
-**Estimated cost:** ~$80-85 per sample (compute + dynamic storage).
+**Estimated end-to-end runtime:** ~17 hours per sample.
+**Estimated cost:** ~$81 per sample (compute + dynamic storage).
 
 See `test/wgs/submit_manifest_wgs_optimised.json` for the full manifest.
 

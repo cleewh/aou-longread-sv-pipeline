@@ -38,6 +38,7 @@ def render(
     output_prefix: str,
     ecr_repo_arns: list[str],
     account_id: str,
+    region: str,
 ) -> dict:
     """Render the execution-role policy template and return the parsed dict.
 
@@ -53,6 +54,7 @@ def render(
         output_prefix=output_prefix,
         ecr_repo_arns=list(ecr_repo_arns),
         account_id=account_id,
+        region=region,
     )
     try:
         return json.loads(rendered)
@@ -70,6 +72,7 @@ def render_to_file(
     output_prefix: str,
     ecr_repo_arns: list[str],
     account_id: str,
+    region: str,
 ) -> Path:
     """Render the template and write the result to ``out_path`` (pretty-printed).
 
@@ -82,6 +85,7 @@ def render_to_file(
         output_prefix,
         ecr_repo_arns,
         account_id,
+        region,
     )
     out = Path(out_path)
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -102,8 +106,9 @@ def _substitute(
     output_prefix: str,
     ecr_repo_arns: list[str],
     account_id: str,
+    region: str,
 ) -> str:
-    """Replace the five known placeholders in one pass.
+    """Replace the six known placeholders in one pass.
 
     We deliberately avoid :class:`string.Template` because the template is
     handwritten JSONC-like text and we need to inject a JSON *array*
@@ -119,6 +124,7 @@ def _substitute(
     out = out.replace("${OUTPUT_BUCKET}", output_bucket)
     out = out.replace("${OUTPUT_PREFIX}", output_prefix)
     out = out.replace("${ACCOUNT_ID}", account_id)
+    out = out.replace("${REGION}", region)
     return out
 
 
@@ -162,6 +168,15 @@ def _build_arg_parser() -> argparse.ArgumentParser:
         help="12-digit AWS account id (substitutes ${ACCOUNT_ID}).",
     )
     p.add_argument(
+        "--region",
+        required=True,
+        help=(
+            "AWS region (substitutes ${REGION}). Used in the CloudWatch "
+            "Logs ARN so the execution role can write logs in the same "
+            "region the workflow runs in."
+        ),
+    )
+    p.add_argument(
         "--ecr-repo-arns",
         required=True,
         nargs="+",
@@ -185,6 +200,7 @@ def main(argv: list[str] | None = None) -> int:
         output_prefix=args.output_prefix,
         ecr_repo_arns=args.ecr_repo_arns,
         account_id=args.account_id,
+        region=args.region,
     )
     text = json.dumps(doc, indent=2, sort_keys=True) + "\n"
     if args.out is None:

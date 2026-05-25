@@ -36,7 +36,7 @@
       "Sid": "Logs",
       "Effect": "Allow",
       "Action": ["logs:CreateLogStream", "logs:PutLogEvents"],
-      "Resource": "arn:aws:logs:ap-southeast-1:${ACCOUNT_ID}:log-group:/aws/omics/WorkflowLog:*"
+      "Resource": "arn:aws:logs:${REGION}:${ACCOUNT_ID}:log-group:/aws/omics/WorkflowLog:*"
     }
   ]
 }

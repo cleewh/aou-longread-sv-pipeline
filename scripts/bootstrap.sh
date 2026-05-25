@@ -93,6 +93,7 @@ else
     --output-prefix "" \
     --ecr-repo-arns "arn:aws:ecr:${REGION}:${ACCOUNT_ID}:repository/aou-sv/*" \
     --account-id "$ACCOUNT_ID" \
+    --region "$REGION" \
     > /tmp/aou_sv_policy.json
   aws iam put-role-policy \
     --role-name "$ROLE_NAME" \
@@ -108,7 +109,12 @@ python3 scripts/mirror-images.py --account-id "$ACCOUNT_ID" --region "$REGION"
 
 # --- 5. ECR repo policies ---
 echo "[5/7] Setting ECR repository policies for HealthOmics..."
-POLICY=$(cat "${REPO_ROOT}/iam/ecr_repo_policy.json")
+# Render the ECR policy template by substituting ${ACCOUNT_ID} so the
+# aws:SourceAccount condition allows HealthOmics in the customer's
+# account to pull. Without this render the condition would pin to the
+# upstream maintainer's account ID and HealthOmics would be denied at
+# run time. See: iam/ecr_repo_policy.json.tmpl.
+POLICY=$(sed "s/\${ACCOUNT_ID}/${ACCOUNT_ID}/g" "${REPO_ROOT}/iam/ecr_repo_policy.json.tmpl")
 for repo in aou-sv/hifiasm aou-sv/pbmm2 aou-sv/sniffles2 aou-sv/pbsv aou-sv/pav aou-sv/pav2svs aou-sv/harmoniser aou-sv/metadata-writer; do
   aws ecr set-repository-policy --region "$REGION" \
     --repository-name "$repo" \

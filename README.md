@@ -20,7 +20,9 @@ each variant.
 Version: see [`VERSION`](./VERSION). License: BSD-3-Clause (see
 `pyproject.toml`).
 
-## Public container images (no AWS account required)
+## Two ways to consume this project
+
+### A. Just need a container image (e.g. running PAV alone)
 
 Pre-built images are published to GitHub Container Registry under
 `ghcr.io/cleewh/aou-sv/<tool>`. They're public — no `docker login` or
@@ -37,11 +39,38 @@ docker pull ghcr.io/cleewh/aou-sv/harmoniser:0.1.0
 docker pull ghcr.io/cleewh/aou-sv/metadata-writer:0.1.0
 ```
 
-These images are functionally identical to the ECR copies used by the
-HealthOmics pipeline (same upstream digests; see
-[`containers/manifest.yaml`](./containers/manifest.yaml) for the digest
-table). The ECR-based deployment path (`bootstrap.sh` →
-`mirror-images.py` → `aws omics start-run`) is unchanged.
+No clone needed for this path.
+
+### B. Running the full SV-detection pipeline on AWS HealthOmics
+
+You need to clone this repo and run the bootstrap. AWS HealthOmics can
+only pull from your own ECR, so the bootstrap mirrors the GHCR images
+into your account's ECR and registers the WDL workflow:
+
+```bash
+git clone https://github.com/cleewh/aou-longread-sv-pipeline.git
+cd aou-longread-sv-pipeline
+./scripts/bootstrap.sh --account-id <YOUR_AWS_ACCOUNT_ID>
+```
+
+Bootstrap pulls the images **from GHCR by default** (fast, no Docker
+Hub rate limits). To force a fresh build from upstream, pass:
+
+```bash
+python3 scripts/mirror-images.py --account-id <YOUR_ID> --source upstream
+```
+
+Then submit a run:
+
+```bash
+python3 scripts/submit-run.py \
+    --manifest path/to/my_manifest.json \
+    --workflow-id <workflow_id_from_bootstrap> \
+    --role-arn <role_arn_from_bootstrap>
+```
+
+Full quickstart with prerequisites is in the **Quick start** section
+below.
 
 The publish workflow lives at
 [`.github/workflows/publish-images.yml`](./.github/workflows/publish-images.yml)

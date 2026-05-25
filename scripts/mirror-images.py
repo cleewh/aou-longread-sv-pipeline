@@ -46,6 +46,12 @@ DEFAULT_REGION = None  # Uses AWS CLI configured region
 DEFAULT_MANIFEST_REL = "containers/manifest.yaml"
 DEFAULT_SOURCES_REL = "SOURCES.md"
 DEFAULT_HEALTHOMICS_CONFIG_REL = ".healthomics/config.toml"
+# Pre-built images are published by .github/workflows/publish-images.yml
+# to this namespace. Customers who clone this repo and run the bootstrap
+# pull from here by default — much faster than rebuilding from upstream
+# Dockerfiles, and avoids Docker Hub anonymous-pull rate limits which
+# are the most common bootstrap failure mode.
+DEFAULT_GHCR_NAMESPACE = "ghcr.io/cleewh/aou-sv"
 
 IMAGE_DIGESTS_SECTION = "## Image digests"
 TABLE_HEADER_ROW = "| Image | Platform | ECR URI | Digest | Mirrored at |"
@@ -241,6 +247,52 @@ def pull_and_tag_upstream(upstream: str, platform: str, local_tag: str) -> None:
     _run(["docker", "tag", upstream, local_tag])
 
 
+def ghcr_image_ref(ghcr_namespace: str, name: str, tag: str) -> str:
+    """Return the GHCR mirror URI for a given manifest entry.
+
+    Pre-built images are published by the ``Publish images to GHCR``
+    workflow at ``.github/workflows/publish-images.yml``, which mirrors
+    every entry in ``containers/manifest.yaml`` to
+    ``<ghcr_namespace>/<name>:<tag>`` (e.g.
+    ``ghcr.io/cleewh/aou-sv/pav:2.4.6``).
+
+    GHCR images are public — no auth needed for ``docker pull``. They
+    bypass Docker Hub's anonymous-pull rate limit (the most common
+    failure mode for ``mirror-images.py``).
+    """
+    # Strip a trailing slash if the user passed one.
+    return f"{ghcr_namespace.rstrip('/')}/{name}:{tag}"
+
+
+def try_pull_from_ghcr(
+    ghcr_ref: str, platform: str, local_tag: str
+) -> bool:
+    """Try ``docker pull`` from GHCR; tag the result. Returns True on success.
+
+    Returns False (without raising) if GHCR doesn't have the image yet
+    (workflow hasn't run, or the entry was added since the last GHCR
+    publish). Caller should fall back to the upstream / local-build path.
+    """
+    print(f"[INFO] Trying GHCR pre-built mirror: {ghcr_ref} ({platform})")
+    try:
+        # Suppress stderr so a 404 from GHCR doesn't pollute the log;
+        # the caller logs the fallback decision.
+        subprocess.run(
+            ["docker", "pull", "--platform", platform, ghcr_ref],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+    except subprocess.CalledProcessError as exc:
+        print(
+            f"[INFO] GHCR pull failed for {ghcr_ref} (will fall back): "
+            f"{exc.stderr.splitlines()[-1] if exc.stderr else 'unknown error'}"
+        )
+        return False
+    _run(["docker", "tag", ghcr_ref, local_tag])
+    return True
+
+
 def push_per_platform(local_tag: str, per_platform_ref: str) -> None:
     print(f"[INFO] Tagging {local_tag} -> {per_platform_ref}")
     _run(["docker", "tag", local_tag, per_platform_ref])
@@ -325,8 +377,24 @@ def mirror_entry(
     region: str,
     ecr_client,
     dry_run: bool,
+    source: str = "ghcr",
+    ghcr_namespace: str = DEFAULT_GHCR_NAMESPACE,
 ) -> dict:
-    """Mirror one image entry. Returns ``{platform_suffix: digest}``."""
+    """Mirror one image entry. Returns ``{platform_suffix: digest}``.
+
+    ``source`` selects the image source:
+      * ``ghcr``   — pull from ``<ghcr_namespace>/<name>:<tag>`` first,
+                     fall back to ``upstream`` (or local build) on failure.
+                     Default; fastest and most reliable for end users.
+      * ``upstream`` — pull from the manifest's ``upstream`` field, or
+                     build the local Dockerfile when present. Use this
+                     when the GHCR mirror is stale or unavailable.
+      * ``build``  — always build from the local Dockerfile when
+                     ``containers/<name>/Dockerfile`` exists; otherwise
+                     fall back to ``upstream``. Used by the publish
+                     workflow itself, where pulling from GHCR would be
+                     a circular dependency.
+    """
     name = entry["name"]
     ecr_repo = entry["ecr_repo"]
     tag = entry["tag"]
@@ -351,17 +419,42 @@ def mirror_entry(
     base_uri = ecr_image_uri(account_id, region, ecr_repo, tag)
     per_platform_refs: list = []
 
+    ghcr_ref = ghcr_image_ref(ghcr_namespace, name, tag)
+
     for platform in platforms:
         local_tag = local_per_platform_tag(name, tag, platform)
-        if has_local_dockerfile:
-            build_local_image(
-                dockerfile_dir,
-                platform,
-                local_tag,
-                build_context=build_context,
-            )
-        else:
-            pull_and_tag_upstream(upstream, platform, local_tag)
+
+        # Precedence:
+        #  - source=ghcr: GHCR first, fall back to upstream/local build.
+        #  - source=upstream / build: skip GHCR entirely.
+        sourced_from_ghcr = False
+        if source == "ghcr":
+            sourced_from_ghcr = try_pull_from_ghcr(ghcr_ref, platform, local_tag)
+
+        if not sourced_from_ghcr:
+            if source == "build" and has_local_dockerfile:
+                build_local_image(
+                    dockerfile_dir,
+                    platform,
+                    local_tag,
+                    build_context=build_context,
+                )
+            elif has_local_dockerfile:
+                # Default fallback for ghcr/upstream: prefer local
+                # Dockerfile when present (matches pre-GHCR behaviour).
+                build_local_image(
+                    dockerfile_dir,
+                    platform,
+                    local_tag,
+                    build_context=build_context,
+                )
+            elif upstream:
+                pull_and_tag_upstream(upstream, platform, local_tag)
+            else:
+                raise RuntimeError(
+                    f"No image source available for {name} ({platform}): "
+                    f"GHCR pull failed, no local Dockerfile, no upstream"
+                )
 
         if dry_run:
             print(
@@ -556,6 +649,27 @@ def build_arg_parser() -> argparse.ArgumentParser:
         default=None,
         help="Comma-separated list of tool names to skip.",
     )
+    parser.add_argument(
+        "--source",
+        default="ghcr",
+        choices=["ghcr", "upstream", "build"],
+        help=(
+            "Where to source images. 'ghcr' (default) pulls pre-built "
+            "images from %(prog)s's GHCR mirror — fastest and avoids "
+            "Docker Hub rate limits. 'upstream' uses the manifest's "
+            "upstream field (or local Dockerfile fallback). 'build' "
+            "always builds from the local Dockerfile when present "
+            "(used by the GHCR publish workflow itself)."
+        ),
+    )
+    parser.add_argument(
+        "--ghcr-namespace",
+        default=DEFAULT_GHCR_NAMESPACE,
+        help=(
+            "GHCR namespace to pull pre-built images from. "
+            "Default: %(default)s. Only used when --source=ghcr."
+        ),
+    )
     return parser
 
 
@@ -613,6 +727,8 @@ def main(argv=None) -> int:
                 region=region,
                 ecr_client=ecr_client,
                 dry_run=args.dry_run,
+                source=args.source,
+                ghcr_namespace=args.ghcr_namespace,
             )
         except Exception as exc:  # noqa: BLE001 - surface every failure, keep going
             print(f"[ERROR] Failed to mirror {name}: {exc}", file=sys.stderr)

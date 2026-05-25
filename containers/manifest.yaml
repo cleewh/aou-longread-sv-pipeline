@@ -7,7 +7,7 @@
 # Each entry has:
 #   name         - logical tool name (matches containers/<name>/ directory)
 #   upstream     - source image reference or base image used to build locally
-#   ecr_repo     - destination repository in ap-southeast-1 ECR (aou-sv/<tool>)
+#   ecr_repo     - destination repository in your ECR registry (aou-sv/<tool>)
 #   tag          - semantic version tag to apply in ECR
 #   platforms    - multi-arch matrix to mirror/build for
 #   digest_<p>   - per-platform image digest, filled in by

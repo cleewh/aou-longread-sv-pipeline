@@ -163,7 +163,7 @@ PY
     }
 
     runtime {
-        docker:  "687677765589.dkr.ecr.ap-southeast-1.amazonaws.com/aou-sv/metadata-writer@sha256:8499b9b304fbaa4617ceb5c22a80a72d2b807c452bd3f5f57c5061a734e7c92a"
+        docker:  "000000000000.dkr.ecr.us-east-1.amazonaws.com/aou-sv/metadata-writer@sha256:8499b9b304fbaa4617ceb5c22a80a72d2b807c452bd3f5f57c5061a734e7c92a"
         cpu:     cpu
         memory:  "~{memory_gb} GB"
         disks:   "local-disk ~{disk_gb} SSD"

@@ -7,8 +7,11 @@ LOG=/var/log/aou-sv-bootstrap.log
 exec > >(tee -a "$LOG") 2>&1
 echo "=== $(date -u +%Y-%m-%dT%H:%M:%SZ) starting aou-sv builder bootstrap ==="
 
-REGION=ap-southeast-1
-ACCOUNT=687677765589
+REGION="${REGION:-$(TOKEN=$(curl -s -X PUT "http://169.254.169.254/latest/api/token" \
+    -H "X-aws-ec2-metadata-token-ttl-seconds: 21600") && \
+    curl -s -H "X-aws-ec2-metadata-token: $TOKEN" \
+    http://169.254.169.254/latest/meta-data/placement/region)}"
+ACCOUNT="${ACCOUNT:-$(aws sts get-caller-identity --query Account --output text --region "$REGION")}"
 BUCKET=aou-longread-sv-${ACCOUNT}-${REGION}
 WORK=/opt/aou-sv
 mkdir -p "$WORK"
@@ -32,6 +35,15 @@ echo "--- fetching pipeline sources ---"
 aws s3 cp "s3://${BUCKET}/bootstrap/aou-sv-pipeline.tar.gz" /tmp/src.tar.gz --region "$REGION"
 tar -xzf /tmp/src.tar.gz -C "$WORK"
 ls -la "$WORK" | head
+
+echo "--- rendering infra/builder_policy.json.tmpl ---"
+# Render with the runtime-derived ACCOUNT and REGION. Output goes to
+# /tmp so the working tree stays clean and the script is idempotent
+# across re-runs. Operators attach the rendered policy to the
+# pre-provisioned builder role; the script does not change the IAM
+# control plane it runs under.
+sed -e "s/\${ACCOUNT_ID}/${ACCOUNT}/g" -e "s/\${REGION}/${REGION}/g" \
+    "$WORK/infra/builder_policy.json.tmpl" > /tmp/builder_policy.json
 
 echo "--- installing Python deps ---"
 python3.11 -m pip install --quiet --upgrade pip setuptools wheel

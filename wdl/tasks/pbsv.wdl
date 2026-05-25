@@ -91,7 +91,7 @@ task PBSV_Discover_Task {
     }
 
     runtime {
-        docker:  "687677765589.dkr.ecr.ap-southeast-1.amazonaws.com/aou-sv/pbsv@sha256:bc6e5a867d30042138f3ef94471fbe16e8ad03efc1794466c56eb3c198db263f"
+        docker:  "000000000000.dkr.ecr.us-east-1.amazonaws.com/aou-sv/pbsv@sha256:bc6e5a867d30042138f3ef94471fbe16e8ad03efc1794466c56eb3c198db263f"
         cpu:     cpu
         memory:  "~{memory_gb} GB"
         disks:   "local-disk ~{disk_gb} SSD"
@@ -126,7 +126,7 @@ task PBSV_Merge_Svsig_Task {
     }
 
     runtime {
-        docker:  "687677765589.dkr.ecr.ap-southeast-1.amazonaws.com/aou-sv/pbsv@sha256:bc6e5a867d30042138f3ef94471fbe16e8ad03efc1794466c56eb3c198db263f"
+        docker:  "000000000000.dkr.ecr.us-east-1.amazonaws.com/aou-sv/pbsv@sha256:bc6e5a867d30042138f3ef94471fbe16e8ad03efc1794466c56eb3c198db263f"
         cpu:     cpu
         memory:  "~{memory_gb} GB"
         disks:   "local-disk ~{disk_gb} SSD"
@@ -200,7 +200,7 @@ task PBSV_Call_Task {
     }
 
     runtime {
-        docker:  "687677765589.dkr.ecr.ap-southeast-1.amazonaws.com/aou-sv/pbsv@sha256:bc6e5a867d30042138f3ef94471fbe16e8ad03efc1794466c56eb3c198db263f"
+        docker:  "000000000000.dkr.ecr.us-east-1.amazonaws.com/aou-sv/pbsv@sha256:bc6e5a867d30042138f3ef94471fbe16e8ad03efc1794466c56eb3c198db263f"
         cpu:     cpu
         memory:  "~{memory_gb} GB"
         disks:   "local-disk ~{disk_gb} SSD"

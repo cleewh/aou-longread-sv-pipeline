@@ -95,7 +95,7 @@ task Sniffles2_Task {
     }
 
     runtime {
-        docker:  "687677765589.dkr.ecr.ap-southeast-1.amazonaws.com/aou-sv/sniffles2@sha256:25f7c214ff891c74343188c66b10cc77439315c9956c65618cf339a7ef36be60"
+        docker:  "000000000000.dkr.ecr.us-east-1.amazonaws.com/aou-sv/sniffles2@sha256:25f7c214ff891c74343188c66b10cc77439315c9956c65618cf339a7ef36be60"
         cpu:     cpu
         memory:  "~{memory_gb} GB"
         disks:   "local-disk ~{disk_gb} SSD"
@@ -150,7 +150,7 @@ task Sniffles2_Merge_Task {
     }
 
     runtime {
-        docker:  "687677765589.dkr.ecr.ap-southeast-1.amazonaws.com/aou-sv/sniffles2@sha256:25f7c214ff891c74343188c66b10cc77439315c9956c65618cf339a7ef36be60"
+        docker:  "000000000000.dkr.ecr.us-east-1.amazonaws.com/aou-sv/sniffles2@sha256:25f7c214ff891c74343188c66b10cc77439315c9956c65618cf339a7ef36be60"
         cpu:     cpu
         memory:  "~{memory_gb} GB"
         disks:   "local-disk ~{disk_gb} SSD"

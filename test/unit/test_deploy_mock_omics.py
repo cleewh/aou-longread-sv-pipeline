@@ -207,7 +207,7 @@ def test_with_budget_alarm():
     ``aws cloudformation deploy`` subprocess call after the workflow is
     created."""
     omics = _make_fake_omics(list_pages=[{"items": []}])
-    sns_topic_arn = "arn:aws:sns:ap-southeast-1:687677765589:alerts"
+    sns_topic_arn = "arn:aws:sns:ap-southeast-1:123456789012:alerts"
 
     with mock.patch("boto3.client", _boto3_factory(omics)), mock.patch.object(
         deploy, "subprocess"

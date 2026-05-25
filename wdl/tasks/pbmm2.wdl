@@ -59,7 +59,7 @@ task Pbmm2_Align {
     }
 
     runtime {
-        docker:  "687677765589.dkr.ecr.ap-southeast-1.amazonaws.com/aou-sv/pbmm2@sha256:3d9990b0b9d99911063348ab5ce288b202183c0ff73c628505ea9650e4909e7f"
+        docker:  "000000000000.dkr.ecr.us-east-1.amazonaws.com/aou-sv/pbmm2@sha256:3d9990b0b9d99911063348ab5ce288b202183c0ff73c628505ea9650e4909e7f"
         cpu:     cpu
         memory:  "~{memory_gb} GB"
         disks:   "local-disk ~{disk_gb} SSD"

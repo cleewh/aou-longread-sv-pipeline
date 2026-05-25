@@ -21,7 +21,7 @@
         "version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
         "git_commit": {"type": "string", "pattern": "^([0-9a-f]{7,40}|unknown)$"},
         "input_manifest_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
-        "region": {"type": "string", "const": "ap-southeast-1"}
+        "region": {"type": "string", "minLength": 1}
       }
     },
     "run": {

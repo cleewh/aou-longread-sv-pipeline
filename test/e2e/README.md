@@ -1,4 +1,4 @@
-# End-to-End Smoke Test — HG002 chr20 on HealthOmics `ap-southeast-1`
+# End-to-End Smoke Test — HG002 chr20 on HealthOmics
 
 This directory holds the inputs, thresholds, cost baseline, and orchestration
 script for the HealthOmics end-to-end smoke run described in Design §Test
@@ -9,12 +9,18 @@ PacBio HiFi reads, benchmarks the harmonised SV calls against the GIAB v0.6
 Tier-1 truth set with `truvari bench`, and compares total observed cost
 against `cost_baseline.json` per Property 20.
 
+> **Note for customers:** every command and example URI in this README uses
+> `<YOUR_ACCOUNT>` / `<YOUR_REGION>` / `<YOUR_BUCKET>` placeholders. Substitute
+> your own 12-digit AWS account ID, AWS region, and S3 bucket name before
+> running anything in this guide.
+
 ## Prerequisites (operator-supplied)
 
-1. An AWS account in `ap-southeast-1` with AWS HealthOmics enabled.
-2. A target S3 bucket in `ap-southeast-1` — the defaults in `inputs.json`
-   use `aou-longread-sv-687677765589-ap-southeast-1`; substitute your own
-   via `--bucket` if different.
+1. An AWS account in your chosen region with AWS HealthOmics enabled.
+2. A target S3 bucket in the same region — pass `--bucket <YOUR_BUCKET>`
+   to the staging scripts and substitute the value before submitting any
+   manifest. The default bucket-name convention is
+   `aou-longread-sv-<YOUR_ACCOUNT>-<YOUR_REGION>`.
 3. Valid AWS credentials on the executor (e.g. `aws configure` or
    instance/role credentials).
 4. Local tools on the `PATH`:
@@ -39,7 +45,7 @@ already present with matching size + SHA-256. On first run it will rewrite
 the placeholder `sha256` / `size_bytes` fields with the observed values.
 
 ```bash
-python3 scripts/stage-test-data.py --bucket aou-longread-sv-687677765589-ap-southeast-1
+python3 scripts/stage-test-data.py --bucket <YOUR_BUCKET>
 ```
 
 If a GIAB or broad-references upstream URI has moved, the script fails with
@@ -49,17 +55,17 @@ in `inputs.json`, commit the change, and re-run.
 ### 2. Build and push container images
 
 ```bash
-python3 scripts/mirror-images.py --account-id <your-account-id>
+python3 scripts/mirror-images.py --account-id <YOUR_ACCOUNT>
 ```
 
-Multi-arch images (Graviton + x86_64) are pushed to ECR in `ap-southeast-1`
-and their per-platform digests are written back to `containers/manifest.yaml`
-and appended to `SOURCES.md`.
+Multi-arch images (Graviton + x86_64) are pushed to ECR in your chosen
+region and their per-platform digests are written back to
+`containers/manifest.yaml` and appended to `SOURCES.md`.
 
 ### 3. Deploy the workflow
 
 ```bash
-python3 scripts/deploy.py --region ap-southeast-1
+python3 scripts/deploy.py --region <YOUR_REGION>
 ```
 
 This idempotently registers `wdl/main.wdl` + `wdl/parameter_template.json`
@@ -71,9 +77,9 @@ monthly budget CloudFormation stack deployed alongside the workflow.
 
 ```bash
 python3 test/e2e/run_e2e.py \
-    --bucket aou-longread-sv-687677765589-ap-southeast-1 \
+    --bucket <YOUR_BUCKET> \
     --workflow-id wfl-xxxxxxxx \
-    --role-arn arn:aws:iam::687677765589:role/AouLongReadSvExecutionRole
+    --role-arn arn:aws:iam::<YOUR_ACCOUNT>:role/AouLongReadSvExecutionRole
 ```
 
 The script exits `0` iff every assertion in Design §Test harness holds.
@@ -114,11 +120,11 @@ A successful run satisfies:
 ## Troubleshooting
 
 - **`submit-run.py` exits with `RegionResidencyError`.** A bucket referenced
-  in the manifest is not in `ap-southeast-1`. Move / rehost the data in
+  in the manifest is not in your chosen region. Move / rehost the data in
   region, or fix the URI.
 - **`truvari bench` fails with `OutputDirectoryExists`.** The harness deletes
   and re-creates the directory, but a locally-clobbered state survives
   across retries; remove the workdir and re-run.
 - **Cost warning fires every run.** Check whether HealthOmics has changed
-  `ap-southeast-1` pricing recently (`pricing/healthomics-ap-southeast-1.json`
-  is a snapshot). Refresh the price list before blaming the workflow.
+  pricing recently (`pricing/healthomics-<YOUR_REGION>.json` is a regional
+  snapshot). Refresh the price list before blaming the workflow.

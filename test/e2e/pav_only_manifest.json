@@ -1,11 +1,12 @@
 {
-  "aws_account_id": "687677765589",
+  "_comment": "Sample submit manifest. Replace <YOUR_BUCKET> with your S3 bucket name (typically aou-longread-sv-${ACCOUNT_ID}-${REGION}) and <YOUR_ACCOUNT> with your 12-digit AWS account ID before passing to scripts/submit-run.py. The pipeline's S3-residency gate will reject manifests that still contain placeholder strings.",
+  "aws_account_id": "<YOUR_ACCOUNT>",
   "sample_id": "HG002_chr20",
-  "hap1_fa_gz": "s3://aou-longread-sv-687677765589-ap-southeast-1/test/e2e/HG002_chr20.hap1.fa.gz",
-  "hap2_fa_gz": "s3://aou-longread-sv-687677765589-ap-southeast-1/test/e2e/HG002_chr20.hap2.fa.gz",
-  "reference_fasta": "s3://aou-longread-sv-687677765589-ap-southeast-1/test/e2e/GRCh38.primary.fa",
-  "reference_fai": "s3://aou-longread-sv-687677765589-ap-southeast-1/test/e2e/GRCh38.primary.fa.fai",
-  "output_prefix": "s3://aou-longread-sv-687677765589-ap-southeast-1/test/e2e/outputs/pav_only/",
+  "hap1_fa_gz": "s3://<YOUR_BUCKET>/test/e2e/HG002_chr20.hap1.fa.gz",
+  "hap2_fa_gz": "s3://<YOUR_BUCKET>/test/e2e/HG002_chr20.hap2.fa.gz",
+  "reference_fasta": "s3://<YOUR_BUCKET>/test/e2e/GRCh38.primary.fa",
+  "reference_fai": "s3://<YOUR_BUCKET>/test/e2e/GRCh38.primary.fa.fai",
+  "output_prefix": "s3://<YOUR_BUCKET>/test/e2e/outputs/pav_only/",
   "run_storage_type": "STATIC",
   "storage_capacity": 2400
 }

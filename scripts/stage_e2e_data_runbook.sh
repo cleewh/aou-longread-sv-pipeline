@@ -1,8 +1,8 @@
 #!/bin/bash
 # Runbook executed on the EC2 builder to stage HG002 chr20 test data into
-# the pipeline's ap-southeast-1 S3 bucket, plus the GIAB v0.6 truth set
-# and the GRCh38 reference. Computes sha256 + size of each staged object
-# and emits a summary JSON to stdout that Task 12 consumes to rewrite
+# the pipeline's S3 bucket, plus the GIAB v0.6 truth set and the GRCh38
+# reference. Computes sha256 + size of each staged object and emits a
+# summary JSON to stdout that Task 12 consumes to rewrite
 # test/e2e/inputs.json locally.
 #
 # This runbook is the "heavy" staging path called out in the
@@ -10,11 +10,17 @@
 # to chr20 (produces a ~5-6 GB slice), fetches the 3.2 GB GRCh38 FASTA,
 # indexes it, and downloads the 2 MB GIAB truth VCF + BED. The standard
 # `stage-test-data.py` does the idempotent S3-upload half.
+#
+# The runbook is env-var-driven so a customer can run it against their own
+# account/region/bucket without editing the file. Set ACCOUNT_ID, REGION,
+# and BUCKET in the environment before invoking, or accept the marked
+# placeholders below.
 set -euo pipefail
 
-BUCKET=aou-longread-sv-687677765589-ap-southeast-1
+REGION="${REGION:-<YOUR_REGION>}"
+ACCOUNT_ID="${ACCOUNT_ID:-<YOUR_ACCOUNT>}"
+BUCKET="${BUCKET:-aou-longread-sv-${ACCOUNT_ID}-${REGION}}"
 WORK=/mnt/aou-sv-stage
-REGION=ap-southeast-1
 
 sudo mkdir -p "$WORK"
 sudo chown "$(id -u):$(id -g)" "$WORK" || true
@@ -29,7 +35,7 @@ cd "$WORK"
 echo "=== step 1: ensure samtools + curl are available ==="
 # AL2023 base repos do not ship samtools. Run it out of the already-mirrored
 # aou-sv/hifiasm container which bakes samtools 1.16 from debian:12-slim.
-SAMTOOLS_IMAGE=687677765589.dkr.ecr.ap-southeast-1.amazonaws.com/aou-sv/hifiasm:0.19.9-amd64
+SAMTOOLS_IMAGE="${SAMTOOLS_IMAGE:-${ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com/aou-sv/hifiasm:0.19.9-amd64}"
 docker pull -q "$SAMTOOLS_IMAGE" >/dev/null
 # Wrapper shim so the rest of the script can say `samtools ...` directly.
 sudo tee /usr/local/bin/samtools >/dev/null <<EOF

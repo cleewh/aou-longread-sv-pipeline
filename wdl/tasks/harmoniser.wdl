@@ -90,7 +90,7 @@ task Harmoniser {
     }
 
     runtime {
-        docker:  "687677765589.dkr.ecr.ap-southeast-1.amazonaws.com/aou-sv/harmoniser@sha256:e60133ad11d00c604249f54db3a3cbeec415dff18d8a72cc44907c3b7cd10c75"
+        docker:  "000000000000.dkr.ecr.us-east-1.amazonaws.com/aou-sv/harmoniser@sha256:e60133ad11d00c604249f54db3a3cbeec415dff18d8a72cc44907c3b7cd10c75"
         cpu:     cpu
         memory:  "~{memory_gb} GB"
         disks:   "local-disk ~{disk_gb} SSD"

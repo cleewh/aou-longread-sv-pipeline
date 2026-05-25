@@ -59,14 +59,14 @@ submit_run_cli = _load_submit_run_cli()
 # ---------------------------------------------------------------------------
 
 
-_BUCKET = "aou-longread-sv-687677765589-ap-southeast-1"
+_BUCKET = "aou-longread-sv-123456789012-ap-southeast-1"
 
 
 def _base_manifest() -> dict:
     """Minimal Input_Manifest with all fields the residency gate inspects."""
     return {
         "sample_id": "HG002_chr20",
-        "aws_account_id": "687677765589",
+        "aws_account_id": "123456789012",
         "hifi_reads_bam": f"s3://{_BUCKET}/test/e2e/HG002_chr20.hifi.bam",
         "hifi_reads_bai": f"s3://{_BUCKET}/test/e2e/HG002_chr20.hifi.bam.bai",
         "reference_fasta": f"s3://{_BUCKET}/test/e2e/GRCh38_no_alt.fa",
@@ -130,7 +130,7 @@ def _run_submit(manifest_path: Path) -> tuple[int, mock.MagicMock]:
                 "--workflow-id",
                 "wfl-FAKEID",
                 "--role-arn",
-                "arn:aws:iam::687677765589:role/fake-omics-exec",
+                "arn:aws:iam::123456789012:role/fake-omics-exec",
                 "--region",
                 "ap-southeast-1",
             ]

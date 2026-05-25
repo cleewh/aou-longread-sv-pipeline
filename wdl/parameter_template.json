@@ -48,7 +48,7 @@
     "optional": true
   },
   "enable_run_cache": {
-    "description": "Use the HealthOmics call-cache when available in ap-southeast-1 (Design D16, Req 17.12).",
+    "description": "Use the HealthOmics call-cache when available in your deployment region (Design D16, Req 17.12).",
     "optional": true
   },
   "harmoniser_filter_override_json": {

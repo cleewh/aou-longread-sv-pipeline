@@ -48,7 +48,7 @@ task PAV2SVs {
     }
 
     runtime {
-        docker:  "687677765589.dkr.ecr.ap-southeast-1.amazonaws.com/aou-sv/pav2svs@sha256:2fa183249819228d70af554f1b98a7d85f65bd7971c091a928a6770bd524136a"
+        docker:  "000000000000.dkr.ecr.us-east-1.amazonaws.com/aou-sv/pav2svs@sha256:2fa183249819228d70af554f1b98a7d85f65bd7971c091a928a6770bd524136a"
         cpu:     cpu
         memory:  "~{memory_gb} GB"
         disks:   "local-disk ~{disk_gb} SSD"

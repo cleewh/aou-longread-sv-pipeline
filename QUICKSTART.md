@@ -10,7 +10,7 @@ Deploy and run the full 3-caller SV detection pipeline (Hifiasm+PAV, Sniffles2, 
 | Docker Desktop | with buildx | `docker buildx version` |
 | Python | 3.11+ | `python3 --version` |
 | AWS credentials | Admin or equivalent | `aws sts get-caller-identity` |
-| Region | ap-southeast-1 | Pipeline is pinned to Singapore |
+| Region | Any HealthOmics-supported region | `aws configure get region` |
 
 ## Step 1: Clone
 
@@ -23,11 +23,12 @@ cd aou-longread-sv-pipeline
 
 ```bash
 chmod +x scripts/bootstrap.sh
+export AWS_DEFAULT_REGION=<YOUR_REGION>   # e.g. us-east-1, eu-west-1, ap-southeast-1
 ./scripts/bootstrap.sh --account-id <YOUR_12_DIGIT_AWS_ACCOUNT_ID>
 ```
 
 This takes ~30 minutes (mostly Docker builds) and:
-- Creates an S3 bucket `aou-longread-sv-<account>-ap-southeast-1`
+- Creates an S3 bucket `aou-longread-sv-<account>-<region>`
 - Creates an IAM execution role `HealthOmicsAouSvExecutionRole`
 - Builds and pushes 8 container images to your ECR
 - Grants HealthOmics pull access to your ECR repos
@@ -48,7 +49,7 @@ Create a JSON file (e.g. `my_sample.json`):
   "hifi_reads_aligned": false,
   "reference_fasta": "s3://your-bucket/path/to/GRCh38.primary.fa",
   "reference_fai": "s3://your-bucket/path/to/GRCh38.primary.fa.fai",
-  "output_prefix": "s3://aou-longread-sv-<account>-ap-southeast-1/outputs/NA24385/",
+  "output_prefix": "s3://aou-longread-sv-<account>-<region>/outputs/NA24385/",
   "run_hifiasm_pav": true,
   "run_sniffles2": true,
   "run_pbsv": true,
@@ -61,7 +62,7 @@ Create a JSON file (e.g. `my_sample.json`):
 
 **Important:**
 - Use a **primary-only** GRCh38 reference (no ALTs/decoys). The pipeline will fail if the reference has more contigs than the BAM's @SQ headers.
-- All S3 URIs must be in `ap-southeast-1`.
+- All S3 URIs must be in the same region as your HealthOmics deployment.
 - Upload the manifest JSON to S3 (the `input_manifest_json` field points to itself).
 
 ## Step 4: Submit
@@ -71,17 +72,17 @@ python scripts/submit-run.py \
   --manifest my_sample.json \
   --workflow-id <WORKFLOW_ID_FROM_BOOTSTRAP> \
   --role-arn arn:aws:iam::<ACCOUNT>:role/HealthOmicsAouSvExecutionRole \
-  --region ap-southeast-1
+  --region <YOUR_REGION>
 ```
 
 ## Step 5: Monitor
 
 ```bash
 # Check run status
-aws omics get-run --region ap-southeast-1 --id <RUN_ID> --query status
+aws omics get-run --region <YOUR_REGION> --id <RUN_ID> --query status
 
 # List task progress
-aws omics list-run-tasks --region ap-southeast-1 --id <RUN_ID> \
+aws omics list-run-tasks --region <YOUR_REGION> --id <RUN_ID> \
   --query 'items[].[name,status]' --output table
 ```
 
@@ -100,14 +101,7 @@ When the run completes, outputs appear under your `output_prefix`:
   run_metadata_json/          # Per-run metadata + cost report
 ```
 
-## Cost estimate
-
-| Dataset | Estimated cost | Wall-clock |
-|---------|---------------|------------|
-| Chr20 only (test) | ~$4 | ~2.5 hours |
-| Whole genome (30x HiFi) | ~$55-77 | ~14 hours |
-
-## Optimised mode
+## Cost optimization
 
 For lower cost (~26% savings, identical output), use resource overrides in your manifest:
 
@@ -148,4 +142,5 @@ InputValidator
                          └─ Harmoniser ─ MetadataWriter
 ```
 
-All three caller branches run in parallel. Harmoniser waits for all enabled callers, then MetadataWriter runs last.
+All three caller branches run in parallel. Harmoniser waits for all enabled
+callers, then MetadataWriter runs last.

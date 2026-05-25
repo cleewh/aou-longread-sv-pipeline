@@ -105,7 +105,7 @@ task Hifiasm_Assemble {
     }
 
     runtime {
-        docker:  "687677765589.dkr.ecr.ap-southeast-1.amazonaws.com/aou-sv/hifiasm@sha256:47911f04186fb399c4885088c7de44fea48873111fb4c4f63fd8278a0006e187"
+        docker:  "000000000000.dkr.ecr.us-east-1.amazonaws.com/aou-sv/hifiasm@sha256:47911f04186fb399c4885088c7de44fea48873111fb4c4f63fd8278a0006e187"
         cpu:     cpu
         memory:  "~{memory_gb} GB"
         disks:   "local-disk ~{disk_gb} SSD"

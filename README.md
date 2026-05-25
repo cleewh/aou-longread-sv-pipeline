@@ -265,16 +265,16 @@ values flow through `scripts/submit_run/resources.py` before `StartRun`.
 
 The pipeline ships an optional AWS Budgets + SNS alarm as a
 CloudFormation template (`scripts/budget-alarm.yaml`). It creates a
-monthly HealthOmics spend budget in `ap-southeast-1` and publishes an
-alarm to the SNS topic you supply when actual or forecast spend breaches
-the threshold (Req 17.13).
+monthly HealthOmics spend budget in your deployment region and publishes
+an alarm to the SNS topic you supply when actual or forecast spend
+breaches the threshold (Req 17.13).
 
 Deploy it alongside the workflow:
 
 ```bash
 python3 scripts/deploy.py --with-budget-alarm \
     --budget-threshold-usd 500 \
-    --budget-sns-topic-arn arn:aws:sns:ap-southeast-1:<account-id>:cost-alerts
+    --budget-sns-topic-arn arn:aws:sns:<YOUR_REGION>:<YOUR_ACCOUNT>:cost-alerts
 ```
 
 The core pipeline is deployable without this flag.
@@ -291,9 +291,11 @@ The core pipeline is deployable without this flag.
   is sized for whole-genome 30× HiFi. For chr20 or subset inputs, set
   `hifiasm_bloom_filter_bits=0` and reduce memory/disk accordingly
   (see `test/e2e/submit_manifest_optimised.json` for chr20 sizing).
-- **Max instance size varies by region.** Singapore (ap-southeast-1)
-  supports up to 96 vCPU (24xlarge). US regions (us-east-1, us-west-2)
-  support up to 192 vCPU (48xlarge).
+- **Max instance size varies by region.** Singapore (`ap-southeast-1`)
+  supports up to 96 vCPU (24xlarge). US regions (`us-east-1`,
+  `us-west-2`) support up to 192 vCPU (48xlarge). Check
+  [HealthOmics service quotas](https://docs.aws.amazon.com/omics/latest/dev/service-quotas.html)
+  for your chosen region.
 
 ## References
 

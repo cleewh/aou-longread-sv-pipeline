@@ -114,7 +114,7 @@ task PAV_Run {
     }
 
     runtime {
-        docker:  "687677765589.dkr.ecr.ap-southeast-1.amazonaws.com/aou-sv/pav@sha256:e36ea9a89aa9370e6336ac64666a2f27b1d3438fd368008d4c53404505b40d07"
+        docker:  "000000000000.dkr.ecr.us-east-1.amazonaws.com/aou-sv/pav@sha256:e36ea9a89aa9370e6336ac64666a2f27b1d3438fd368008d4c53404505b40d07"
         cpu:     cpu
         memory:  "~{memory_gb} GB"
         disks:   "local-disk ~{disk_gb} SSD"

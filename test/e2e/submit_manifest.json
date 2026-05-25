@@ -1,11 +1,12 @@
 {
+  "_comment": "Sample submit manifest. Replace <YOUR_BUCKET> with your S3 bucket name (typically aou-longread-sv-${ACCOUNT_ID}-${REGION}) and <YOUR_ACCOUNT> with your 12-digit AWS account ID before passing to scripts/submit-run.py. The pipeline's S3-residency gate will reject manifests that still contain placeholder strings.",
   "sample_id": "HG002_chr20",
-  "hifi_reads_bam": "s3://aou-longread-sv-687677765589-ap-southeast-1/test/e2e/HG002_chr20.hifi.bam",
-  "hifi_reads_bai": "s3://aou-longread-sv-687677765589-ap-southeast-1/test/e2e/HG002_chr20.hifi.bam.bai",
+  "hifi_reads_bam": "s3://<YOUR_BUCKET>/test/e2e/HG002_chr20.hifi.bam",
+  "hifi_reads_bai": "s3://<YOUR_BUCKET>/test/e2e/HG002_chr20.hifi.bam.bai",
   "hifi_reads_aligned": true,
-  "reference_fasta": "s3://aou-longread-sv-687677765589-ap-southeast-1/test/e2e/GRCh38.primary.fa",
-  "reference_fai": "s3://aou-longread-sv-687677765589-ap-southeast-1/test/e2e/GRCh38.primary.fa.fai",
-  "output_prefix": "s3://aou-longread-sv-687677765589-ap-southeast-1/test/e2e/outputs/HG002_chr20/",
+  "reference_fasta": "s3://<YOUR_BUCKET>/test/e2e/GRCh38.primary.fa",
+  "reference_fai": "s3://<YOUR_BUCKET>/test/e2e/GRCh38.primary.fa.fai",
+  "output_prefix": "s3://<YOUR_BUCKET>/test/e2e/outputs/HG002_chr20/",
   "run_hifiasm_pav": true,
   "run_sniffles2": true,
   "run_pbsv": true,
@@ -14,6 +15,6 @@
   "run_storage_type": "STATIC",
   "storage_capacity": 4800,
   "enable_run_cache": true,
-  "aws_account_id": "687677765589",
-  "input_manifest_json": "s3://aou-longread-sv-687677765589-ap-southeast-1/test/e2e/submit_manifest.json"
+  "aws_account_id": "<YOUR_ACCOUNT>",
+  "input_manifest_json": "s3://<YOUR_BUCKET>/test/e2e/submit_manifest.json"
 }

@@ -32,8 +32,8 @@
         "s3:GetBucketLocation"
       ],
       "Resource": [
-        "arn:aws:s3:::aou-longread-sv-687677765589-ap-southeast-1",
-        "arn:aws:s3:::aou-longread-sv-687677765589-ap-southeast-1/*"
+        "arn:aws:s3:::aou-longread-sv-${ACCOUNT_ID}-${REGION}",
+        "arn:aws:s3:::aou-longread-sv-${ACCOUNT_ID}-${REGION}/*"
       ]
     },
     {
@@ -68,7 +68,7 @@
       "Sid": "PassExecutionRole",
       "Effect": "Allow",
       "Action": "iam:PassRole",
-      "Resource": "arn:aws:iam::687677765589:role/HealthOmicsAouSvExecutionRole",
+      "Resource": "arn:aws:iam::${ACCOUNT_ID}:role/HealthOmicsAouSvExecutionRole",
       "Condition": {
         "StringEquals": {
           "iam:PassedToService": "omics.amazonaws.com"

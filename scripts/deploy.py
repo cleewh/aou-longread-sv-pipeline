@@ -166,6 +166,7 @@ def _deploy_budget_alarm(
             "--parameter-overrides",
             f"Threshold={threshold_usd}",
             f"SnsTopicArn={sns_topic_arn}",
+            f"Region={region}",
             "--region",
             region,
         ],

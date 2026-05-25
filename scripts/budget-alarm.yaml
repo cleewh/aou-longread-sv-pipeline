@@ -1,14 +1,19 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: >-
   Optional AWS Budgets alarm for the AoU Long-Read SV Pipeline HealthOmics spend
-  in ap-southeast-1 (Requirement 17.13). Deployed by scripts/deploy.py when the
-  operator passes --with-budget-alarm.
+  in the deployment region (Requirement 17.13). Deployed by scripts/deploy.py
+  when the operator passes --with-budget-alarm.
 
 Parameters:
   Threshold:
     Type: Number
     Description: Monthly USD threshold above which the budget alarm fires.
     MinValue: 0.01
+  Region:
+    Type: String
+    Description: AWS region whose HealthOmics spend the budget tracks.
+    AllowedPattern: '^[a-z]{2}-[a-z]+-\d+$'
+    ConstraintDescription: Must be a valid AWS region code (e.g. us-east-1).
   SnsTopicArn:
     Type: String
     Description: SNS topic ARN notified when the budget is exceeded.
@@ -30,7 +35,7 @@ Resources:
           Service:
             - 'AWS HealthOmics'
           Region:
-            - ap-southeast-1
+            - !Ref Region
       NotificationsWithSubscribers:
         - Notification:
             NotificationType: ACTUAL

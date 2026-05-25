@@ -42,12 +42,16 @@ HealthOmics WDL engine. The concrete substitutions are:
   layout.
 - **Public-registry Docker URIs replaced by ECR digests.** Every
   `runtime.docker` in an adapted task points at
-  `687677765589.dkr.ecr.ap-southeast-1.amazonaws.com/aou-sv/<tool>@sha256:<digest>`
-  (Req 8.1 / 8.2, Property 6). Upstream Docker Hub / quay.io URIs are
-  mirrored into ECR by `scripts/mirror-images.py` before the first deploy
-  so the WDL never requires a cross-registry pull. Pre-Task-22, every
-  digest is the all-zeros sentinel; `mirror-images.py` rewrites it on
-  first push and records the real digest in `## Image digests` below.
+  `${ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com/aou-sv/<tool>@sha256:<digest>`
+  (rewritten from the synthetic on-disk placeholder
+  `000000000000.dkr.ecr.us-east-1.amazonaws.com` by
+  `scripts/stamp-wdl-digests.py` at customer bootstrap; see commit
+  `fa5373f`). Req 8.1 / 8.2, Property 6. Upstream Docker Hub / quay.io
+  URIs are mirrored into the customer's ECR by `scripts/mirror-images.py`
+  before the first deploy so the WDL never requires a cross-registry
+  pull. Pre-mirror, every digest is the all-zeros sentinel;
+  `mirror-images.py` rewrites it on first push and records the real
+  digest in `## Image digests` below.
 - **`File?` optional outputs on conditional branches.** Each of the three
   caller branches (Hifiasm → PAV → PAV2SVs, Sniffles2, PBSV) is wrapped in
   a WDL `if (...)` block so a single disabled caller does not fail the
@@ -179,44 +183,17 @@ Every push from scripts/mirror-images.py appends a row here. Format:
 Populated by Task 2.2. Requirement 8.5, 17.5.
 -->
 
-_Empty until Task 22 runs the first `scripts/mirror-images.py` push to
-ECR. Until that first real push every `wdl/tasks/*.wdl` `runtime.docker`
-reference carries the sentinel digest
-`sha256:0000000000000000000000000000000000000000000000000000000000000000`
-(see the per-task comment block in each WDL file);
-`scripts/mirror-images.py` rewrites the sentinels to real per-platform
-digests and appends one row per `(image, platform)` pair to this
-section._
+_Empty until the customer's first `scripts/mirror-images.py` push to
+ECR. Until that first push, every `wdl/tasks/*.wdl` `runtime.docker`
+reference carries the synthetic on-disk placeholder
+`000000000000.dkr.ecr.us-east-1.amazonaws.com/aou-sv/<image>@sha256:<digest>`;
+`scripts/stamp-wdl-digests.py` rewrites the placeholder to the
+customer's account and region (commit `fa5373f`) and
+`scripts/mirror-images.py` appends one row per `(image, platform)` pair
+to this section._
 
 | Image | Platform | ECR URI | Digest | Mirrored at |
 |---|---|---|---|---|
-| hifiasm | linux/amd64 | 687677765589.dkr.ecr.ap-southeast-1.amazonaws.com/aou-sv/hifiasm:0.19.9 | sha256:17395fe9b936e2df99cf7eb46a8e606d959c53313ec38fb37f029ea4f4a17f73 | 2026-05-10T00:00:22Z |
-| metadata-writer | linux/amd64 | 687677765589.dkr.ecr.ap-southeast-1.amazonaws.com/aou-sv/metadata-writer:0.1.0 | sha256:3d3d7add51429c501a79a654fdc5828968033d10b31590bb42274d7926d9abdb | 2026-05-10T13:24:56Z |
-| metadata-writer | linux/arm64 | 687677765589.dkr.ecr.ap-southeast-1.amazonaws.com/aou-sv/metadata-writer:0.1.0 | sha256:eb538cab8a2e635ea3b1f1ba858bf5f79195eb3c25fb026b7e5c421de27cda50 | 2026-05-10T13:24:56Z |
-| pbsv | linux/amd64 | 687677765589.dkr.ecr.ap-southeast-1.amazonaws.com/aou-sv/pbsv:2.9.0 | sha256:69ee82d8be5aa4f7cd07b229bd1ef5d775b991206dd21bc3352f36c2fb89b50c | 2026-05-10T14:07:35Z |
-| sniffles2 | linux/amd64 | 687677765589.dkr.ecr.ap-southeast-1.amazonaws.com/aou-sv/sniffles2:2.4 | sha256:8ca6e788ab777e1ebfb87ec8ce1024d7fb9c8272281b98445a01e4efaac6db99 | 2026-05-10T14:12:14Z |
-| hifiasm | linux/amd64 | 687677765589.dkr.ecr.ap-southeast-1.amazonaws.com/aou-sv/hifiasm:0.19.9 | sha256:647ff00e4e556b7bbc79676ae545340324f7bba824b0581eebb4b3962f70b37b | 2026-05-10T14:54:50Z |
-| sniffles2 | linux/amd64 | 687677765589.dkr.ecr.ap-southeast-1.amazonaws.com/aou-sv/sniffles2:2.4 | sha256:25f7c214ff891c74343188c66b10cc77439315c9956c65618cf339a7ef36be60 | 2026-05-10T14:54:50Z |
-| pbsv | linux/amd64 | 687677765589.dkr.ecr.ap-southeast-1.amazonaws.com/aou-sv/pbsv:2.9.0 | sha256:bc6e5a867d30042138f3ef94471fbe16e8ad03efc1794466c56eb3c198db263f | 2026-05-10T14:54:50Z |
-| pav | linux/amd64 | 687677765589.dkr.ecr.ap-southeast-1.amazonaws.com/aou-sv/pav:2.4.6 | sha256:bf127a4870a329d4918b05aa3a6f2bca056cd6a6bddb911e916b33e3d04d132e | 2026-05-10T14:54:50Z |
-| pav2svs | linux/amd64 | 687677765589.dkr.ecr.ap-southeast-1.amazonaws.com/aou-sv/pav2svs:0.1.0 | sha256:05c252b369d47eff147f57740ee40e60146b02ef3d21e60316a32c94246bf8a2 | 2026-05-10T14:54:50Z |
-| pav2svs | linux/arm64 | 687677765589.dkr.ecr.ap-southeast-1.amazonaws.com/aou-sv/pav2svs:0.1.0 | sha256:32d35d7227a8df9b7b8d0455866292b41ae6859c1a84becf5fb3704abfefcbc3 | 2026-05-10T14:54:50Z |
-| harmoniser | linux/amd64 | 687677765589.dkr.ecr.ap-southeast-1.amazonaws.com/aou-sv/harmoniser:0.1.0 | sha256:c709d07131b6bebb5fac4332bff9e734a1dbb3cd5d0867d96105471ba7e68251 | 2026-05-10T14:54:50Z |
-| harmoniser | linux/arm64 | 687677765589.dkr.ecr.ap-southeast-1.amazonaws.com/aou-sv/harmoniser:0.1.0 | sha256:a4a081e6dfc19be29be3eab7367ca624120080b0ccc17a0ed949edc2ea5bd714 | 2026-05-10T14:54:50Z |
-| metadata-writer | linux/amd64 | 687677765589.dkr.ecr.ap-southeast-1.amazonaws.com/aou-sv/metadata-writer:0.1.0 | sha256:9f82f0c3628f36c4537ee256b6b4e02639b42c1f937499dbd5e96df32b9aad35 | 2026-05-10T14:54:50Z |
-| metadata-writer | linux/arm64 | 687677765589.dkr.ecr.ap-southeast-1.amazonaws.com/aou-sv/metadata-writer:0.1.0 | sha256:a3f56d612b95695c4d02a288f434047a9e0371a22d5cd26a56d88da5e857d895 | 2026-05-10T14:54:50Z |
-| pav2svs | linux/amd64 | 687677765589.dkr.ecr.ap-southeast-1.amazonaws.com/aou-sv/pav2svs:0.1.0 | sha256:2fa183249819228d70af554f1b98a7d85f65bd7971c091a928a6770bd524136a | 2026-05-11T08:31:18Z |
-| pav2svs | linux/arm64 | 687677765589.dkr.ecr.ap-southeast-1.amazonaws.com/aou-sv/pav2svs:0.1.0 | sha256:14b6933676451ca0af21ba91b2dde7cacd4617cf790107982dbafe89fc748357 | 2026-05-11T08:31:18Z |
-| harmoniser | linux/amd64 | 687677765589.dkr.ecr.ap-southeast-1.amazonaws.com/aou-sv/harmoniser:0.1.0 | sha256:40a40053c655c1e4559867e2fbc6b6ec121b99a214cebf1c33702720846b8afd | 2026-05-11T08:31:18Z |
-| harmoniser | linux/arm64 | 687677765589.dkr.ecr.ap-southeast-1.amazonaws.com/aou-sv/harmoniser:0.1.0 | sha256:36af629546304be7e2d89be4b52dcbad7b5898ac21502ef249383a4ec93eafeb | 2026-05-11T08:31:18Z |
-| metadata-writer | linux/amd64 | 687677765589.dkr.ecr.ap-southeast-1.amazonaws.com/aou-sv/metadata-writer:0.1.0 | sha256:8499b9b304fbaa4617ceb5c22a80a72d2b807c452bd3f5f57c5061a734e7c92a | 2026-05-11T08:31:18Z |
-| metadata-writer | linux/arm64 | 687677765589.dkr.ecr.ap-southeast-1.amazonaws.com/aou-sv/metadata-writer:0.1.0 | sha256:7d183992535e1d77b21f2b9bca0e2e7a69ce9c2d5e6a87672b1499e1b9f48963 | 2026-05-11T08:31:18Z |
-| hifiasm | linux/amd64 | 687677765589.dkr.ecr.ap-southeast-1.amazonaws.com/aou-sv/hifiasm:0.19.9 | sha256:47911f04186fb399c4885088c7de44fea48873111fb4c4f63fd8278a0006e187 | 2026-05-12T07:44:59Z |
-| harmoniser | linux/amd64 | 687677765589.dkr.ecr.ap-southeast-1.amazonaws.com/aou-sv/harmoniser:0.1.0 | sha256:e60133ad11d00c604249f54db3a3cbeec415dff18d8a72cc44907c3b7cd10c75 | 2026-05-12T15:03:36Z |
-| harmoniser | linux/arm64 | 687677765589.dkr.ecr.ap-southeast-1.amazonaws.com/aou-sv/harmoniser:0.1.0 | sha256:fd2613b27a6f6a3ca6bca02a005059e6f3bfd9b03cd7fe66c0e66acaad6b7d7a | 2026-05-12T15:03:36Z |
-| pav | linux/amd64 | 687677765589.dkr.ecr.ap-southeast-1.amazonaws.com/aou-sv/pav:2.4.6 | sha256:5dc6475b8e0f50b6ac305887ce7e95377dd08af3e92bec363141340847364cb9 | 2026-05-12T22:22:25Z |
-| pav | linux/amd64 | 687677765589.dkr.ecr.ap-southeast-1.amazonaws.com/aou-sv/pav:2.4.6 | sha256:85329d3b65abc81fae865fd29073c052401c150e331aa846896aa12d05d401c3 | 2026-05-13T01:18:59Z |
-| pav | linux/amd64 | 687677765589.dkr.ecr.ap-southeast-1.amazonaws.com/aou-sv/pav:2.4.6 | sha256:e36ea9a89aa9370e6336ac64666a2f27b1d3438fd368008d4c53404505b40d07 | 2026-05-13T09:01:05Z |
 
 ## Adaptation notes
 
@@ -378,9 +355,9 @@ Task 22 work split is:
   - Engine: `WDL`, main: `main.wdl`, 54 parameterTemplate entries.
 - ✅ **AWS infrastructure** — the following are provisioned and
   least-privilege:
-  - S3 bucket `s3://aou-longread-sv-687677765589-ap-southeast-1/`
-    (versioned, public-access-blocked, `ap-southeast-1`).
-  - IAM role `arn:aws:iam::687677765589:role/HealthOmicsAouSvExecutionRole`
+  - S3 bucket `s3://<YOUR_BUCKET>/`
+    (versioned, public-access-blocked, in your chosen region).
+  - IAM role `arn:aws:iam::<YOUR_ACCOUNT>:role/HealthOmicsAouSvExecutionRole`
     (trust: `omics.amazonaws.com` only; inline policy scoped to the
     bucket, ECR repos under `aou-sv/*`, the HealthOmics log group, and
     `omics:Get*`/`omics:List*`).
@@ -427,18 +404,18 @@ Task 22 work split is:
 
 ### To unblock a full run
 
-1. Run `scripts/mirror-images.py --account-id 687677765589` on a host
+1. Run `scripts/mirror-images.py --account-id <YOUR_ACCOUNT>` on a host
    with a working Docker daemon. Every sentinel digest in
    `containers/manifest.yaml` and in every `wdl/tasks/*.wdl`
-   `runtime.docker` gets rewritten to a real `ap-southeast-1` ECR
-   digest, and `## Image digests` below collects the rows.
-2. Run `scripts/stage-test-data.py --bucket aou-longread-sv-687677765589-ap-southeast-1`
+   `runtime.docker` gets rewritten to a real ECR digest in your account
+   and region, and `## Image digests` below collects the rows.
+2. Run `scripts/stage-test-data.py --bucket <YOUR_BUCKET>`
    to seed HG002 chr20 HiFi reads, the GRCh38 reference, and the GIAB
    v0.6 truth set (Req 15).
-3. Re-run `scripts/deploy.py --force --region ap-southeast-1` so the
+3. Re-run `scripts/deploy.py --force --region <YOUR_REGION>` so the
    new ECR digests land in the workflow definition.
-4. Run `test/e2e/run_e2e.py --bucket ... --workflow-id 6041931
-   --role-arn arn:aws:iam::687677765589:role/HealthOmicsAouSvExecutionRole`
+4. Run `test/e2e/run_e2e.py --bucket <YOUR_BUCKET> --workflow-id 6041931
+   --role-arn arn:aws:iam::<YOUR_ACCOUNT>:role/HealthOmicsAouSvExecutionRole`
    and capture:
    - HealthOmics run id + status in `## Image digests` (for the
      corresponding digests) and in a new `## Measured high-water marks`
@@ -629,7 +606,7 @@ run_pbsv=true`. Every task in the enabled branches reached
 | MetadataWriter | ✅ COMPLETED |
 
 Outputs under
-`s3://aou-longread-sv-687677765589-ap-southeast-1/test/e2e/outputs/HG002_chr20/1316521/out/`:
+`s3://<YOUR_BUCKET>/test/e2e/outputs/HG002_chr20/1316521/out/`:
 
 - `HG002_chr20.sv.harmonised.vcf.gz` + `.tbi` — 1199 chr20 SV records
   - 702 with `CALLERS=Sniffles2,pbsv` (supported by both callers)
@@ -672,7 +649,7 @@ The harmonised VCF carries the canonical
     HLA + decoys); the GIAB HG002 pbmm2 BAM has only 195 primary
     contigs. pbsv call refused with "Different number of chromosomes
     between svsig and reference." Produced a primary-only subset at
-    `s3://aou-longread-sv-687677765589-ap-southeast-1/test/e2e/GRCh38.primary.fa`
+    `s3://<YOUR_BUCKET>/test/e2e/GRCh38.primary.fa`
     (3.1 GB, 195 contigs) via `samtools faidx ref.fa -r bam_contigs.txt`
     and pointed the submit manifest at it.
 
@@ -744,7 +721,7 @@ any non-empty subset of the three per-caller VCFs).
    reference is retained in S3 for historical reasons but every
    caller prefers the primary-only form.
 3. Run Truvari benchmark on
-   `s3://aou-longread-sv-687677765589-ap-southeast-1/test/e2e/outputs/HG002_chr20/1316521/out/harmonised_sv_vcf/HG002_chr20.sv.harmonised.vcf.gz`
+   `s3://<YOUR_BUCKET>/test/e2e/outputs/HG002_chr20/1316521/out/harmonised_sv_vcf/HG002_chr20.sv.harmonised.vcf.gz`
    vs GIAB v0.6 truth to validate recall/precision against the 0.80
    thresholds in `test/e2e/truvari_thresholds.json`.
 4. Capture the per-task cost from the HealthOmics run-task records
@@ -770,7 +747,7 @@ tasks COMPLETED:
 | Harmoniser | ✅ COMPLETED |
 | MetadataWriter | ✅ COMPLETED |
 
-Outputs under `s3://aou-longread-sv-687677765589-ap-southeast-1/test/e2e/outputs/HG002_chr20/5607624/out/`:
+Outputs under `s3://<YOUR_BUCKET>/test/e2e/outputs/HG002_chr20/5607624/out/`:
 
 - `harmonised_sv_vcf/HG002_chr20.sv.harmonised.vcf.gz` + tbi —
   **1608 harmonised chr20 SV records** with CALLERS provenance:

@@ -96,40 +96,146 @@ export AWS_DEFAULT_REGION=ap-southeast-1  # or us-east-1, eu-west-1, etc.
 
 ## Quick start
 
+Deploy and run the full 3-caller SV detection pipeline (Hifiasm+PAV,
+Sniffles2, PBSV) in your own AWS account. End-to-end takes about
+30 minutes for bootstrap plus ~2 hours for an HG002 chr20 run (~$5),
+or ~17 hours for a whole-genome 30× HiFi sample (~$81).
+
 ### 1. Prerequisites
 
-- An AWS account with AWS HealthOmics enabled in your target region.
-- AWS CLI v2 configured with credentials and default region.
-- Docker with `buildx` (for multi-arch image builds).
-- Python 3.11+ with pip.
+| Requirement | Version | Check |
+|---|---|---|
+| AWS CLI v2 | 2.x | `aws --version` |
+| Docker Desktop | with `buildx` | `docker buildx version` |
+| Python | 3.11+ | `python3 --version` |
+| AWS credentials | Admin or equivalent | `aws sts get-caller-identity` |
+| Region | Any HealthOmics-supported region | `aws configure get region` |
 
-### 2. One-command bootstrap
+### 2. Clone
 
 ```bash
-./scripts/bootstrap.sh --account-id <YOUR_AWS_ACCOUNT_ID>
+git clone https://github.com/cleewh/aou-longread-sv-pipeline.git
+cd aou-longread-sv-pipeline
 ```
 
-This creates the S3 bucket, IAM role, builds and pushes all 8 container
-images to ECR, sets ECR policies, deploys the WDL workflow, and prints
-the workflow ID and role ARN.
+### 3. Bootstrap (one command)
 
-### 3. Submit a run
+```bash
+chmod +x scripts/bootstrap.sh
+export AWS_DEFAULT_REGION=<YOUR_REGION>   # e.g. us-east-1, eu-west-1, ap-southeast-1
+./scripts/bootstrap.sh --account-id <YOUR_12_DIGIT_AWS_ACCOUNT_ID>
+```
+
+This takes ~30 minutes and:
+
+- Creates the S3 bucket `aou-longread-sv-<account>-<region>`
+- Creates the IAM execution role `HealthOmicsAouSvExecutionRole`
+- Pulls 8 pre-built images from `ghcr.io/cleewh/aou-sv/*` and pushes
+  them into your ECR (no Docker Hub credentials needed; pass
+  `--source upstream` if you want to rebuild from upstream Dockerfiles
+  instead)
+- Grants HealthOmics pull access to your ECR repos
+- Stamps WDL `runtime.docker` references with your ECR digests
+- Deploys the WDL workflow to HealthOmics
+- Writes `.healthomics/config.toml` with your settings
+
+At the end it prints your **Workflow ID** and **Role ARN** — record
+these.
+
+### 4. Stage test data (optional, for the HG002 chr20 e2e smoke test)
+
+To run the HG002 chr20 smoke test, stage GIAB's public HG002 chr20
+BAM, the GRCh38 reference, and the GIAB v0.6 truth set into your
+bucket:
+
+```bash
+python3 scripts/stage-test-data.py \
+    --bucket aou-longread-sv-<YOUR_ACCOUNT>-<YOUR_REGION>
+```
+
+Skip this if you're running on your own data.
+
+### 5. Render a submit manifest
+
+The sample manifests in `test/e2e/` and `test/wgs/` use `<YOUR_BUCKET>`
+and `<YOUR_ACCOUNT>` placeholders. Substitute and upload to S3:
+
+```bash
+sed \
+    -e "s|<YOUR_BUCKET>|aou-longread-sv-<YOUR_ACCOUNT>-<YOUR_REGION>|g" \
+    -e "s|<YOUR_ACCOUNT>|<YOUR_ACCOUNT>|g" \
+    test/e2e/submit_manifest.json > my_manifest.json
+
+aws s3 cp my_manifest.json \
+    s3://aou-longread-sv-<YOUR_ACCOUNT>-<YOUR_REGION>/test/e2e/submit_manifest.json
+```
+
+The `input_manifest_json` field points to the manifest's own S3
+location, so it must exist there before `submit-run.py` runs.
+
+### 6. Submit
 
 ```bash
 python3 scripts/submit-run.py \
-    --manifest path/to/my_manifest.json \
-    --workflow-id <workflow_id_from_bootstrap> \
-    --role-arn <role_arn_from_bootstrap>
+    --manifest my_manifest.json \
+    --workflow-id <WORKFLOW_ID_FROM_BOOTSTRAP> \
+    --role-arn arn:aws:iam::<YOUR_ACCOUNT>:role/HealthOmicsAouSvExecutionRole \
+    --region <YOUR_REGION>
 ```
 
 `submit-run.py` runs pre-flight checks: residency validation,
-Input_Manifest schema validation, resource override resolution, chromosome
-shard planning, and cost-optimal instance selection. `--dry-run` prints
-every check and exits without calling `StartRun`.
+Input_Manifest schema validation, resource override resolution,
+chromosome shard planning, and cost-optimal instance selection.
+`--dry-run` prints every check and exits without calling `StartRun`.
 
-See `test/wgs/submit_manifest_wgs_optimised.json` for the recommended
-whole-genome manifest and `test/e2e/submit_manifest_optimised.json` for
-chr20 testing.
+The script prints the run ID on success.
+
+### 7. Monitor
+
+```bash
+# Run status
+aws omics get-run --region <YOUR_REGION> --id <RUN_ID> --query status \
+    --output text
+
+# Per-task progress
+aws omics list-run-tasks --region <YOUR_REGION> --id <RUN_ID> \
+    --query 'items[].[name,status]' --output table
+```
+
+When the run completes, outputs land under your `output_prefix`. See
+[Output layout](#output-layout) below.
+
+### Sample manifests
+
+| File | Use case |
+|---|---|
+| `test/e2e/submit_manifest.json` | HG002 chr20 smoke test, default sizing (~2h, ~$5) |
+| `test/e2e/submit_manifest_optimised.json` | HG002 chr20, right-sized resources (~26% cheaper) |
+| `test/e2e/pav_only_manifest.json` | Run only the PAV branch on pre-assembled haplotypes |
+| `test/wgs/submit_manifest_wgs_optimised.json` | Whole-genome 30× HiFi, optimised sizing (~17h, ~$81) |
+
+### Architecture
+
+```
+InputValidator
+  └─ Pbmm2_Align? ─┬─ Hifiasm ─ PAV ─ PAV2SVs
+                    ├─ Sniffles2 (×24 shards) ─ Merge
+                    └─ PBSV Discover (×24) ─ Call
+                         └─ Harmoniser ─ MetadataWriter
+```
+
+All three caller branches run in parallel. Harmoniser waits for all
+enabled callers, then MetadataWriter runs last.
+
+### Troubleshooting
+
+| Issue | Fix |
+|---|---|
+| `Unable to access image URI` | Re-run bootstrap step 5 (ECR repo policies); or check that `mirror-images.py` finished successfully |
+| `Different number of chromosomes` | Use a primary-only GRCh38 reference (no ALTs/decoys) |
+| Task `Terminated` silently | Check task memory; bump `<task>_memory_gb` in the manifest |
+| `RegionResidencyError` from `submit-run.py` | An S3 URI in the manifest is not in your deployment region |
+| `Unexpected workflow parameters` from StartRun | A field in your manifest is not declared in `wdl/parameter_template.json`; remove it |
 
 ## Benchmarks (GIAB HG002, 30× HiFi, ap-southeast-1)
 

@@ -306,11 +306,20 @@ def main(argv: list[str] | None = None) -> int:
     storage_type = manifest.get("run_storage_type", "DYNAMIC")
     # HealthOmics rejects any key in `parameters` that isn't declared in
     # the workflow's parameter template. Strip submit-run-only convenience
-    # fields (aws_account_id, run_cache_id, run_cache_behavior) before
-    # passing the manifest through.
-    _SUBMIT_ONLY_FIELDS = {"aws_account_id", "run_cache_id", "run_cache_behavior", "storage_capacity", "_comment_optimisations"}
+    # fields (aws_account_id, run_cache_id, run_cache_behavior) and any
+    # JSON-comment field (any key starting with "_comment") before passing
+    # the manifest through. Sample manifests carry a "_comment" key with
+    # substitution instructions for the customer (commit c74e995).
+    _SUBMIT_ONLY_FIELDS = {
+        "aws_account_id",
+        "run_cache_id",
+        "run_cache_behavior",
+        "storage_capacity",
+    }
     workflow_parameters = {
-        k: v for k, v in manifest.items() if k not in _SUBMIT_ONLY_FIELDS
+        k: v
+        for k, v in manifest.items()
+        if k not in _SUBMIT_ONLY_FIELDS and not k.startswith("_comment")
     }
     start_kwargs = {
         "workflowId": args.workflow_id,

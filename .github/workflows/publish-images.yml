@@ -1,0 +1,208 @@
+name: Publish images to GHCR
+
+# Builds the 8 container images defined in containers/manifest.yaml
+# and pushes them to GitHub Container Registry (ghcr.io) so customers
+# can pull without AWS credentials.
+#
+# Trigger:
+#   - manual via the Actions tab (workflow_dispatch)
+#   - automatic on push to main when relevant files change
+#
+# Authentication: uses the built-in GITHUB_TOKEN. Published packages
+# inherit the repo's visibility (public).
+#
+# Customer pull command (after first successful run):
+#   docker pull ghcr.io/cleewh/aou-sv/pav:2.4.6
+#   docker pull ghcr.io/cleewh/aou-sv/hifiasm:0.19.9
+#   docker pull ghcr.io/cleewh/aou-sv/pbmm2:1.13.1
+#   ... etc
+
+on:
+  workflow_dispatch:
+    inputs:
+      images:
+        description: "Comma-separated image names to build (default: all)"
+        required: false
+        default: "all"
+  push:
+    branches: [main]
+    paths:
+      - "containers/**"
+      - ".github/workflows/publish-images.yml"
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  REGISTRY_NAMESPACE: ghcr.io/${{ github.repository_owner }}/aou-sv
+
+jobs:
+  # Read containers/manifest.yaml once and emit a build matrix.
+  matrix:
+    name: Build matrix from manifest
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.build_matrix.outputs.matrix }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build matrix from containers/manifest.yaml
+        id: build_matrix
+        run: |
+          python3 - <<'PY'
+          import json, os, yaml
+
+          requested = "${{ github.event.inputs.images || 'all' }}".strip().lower()
+          allowlist = None
+          if requested and requested != "all":
+              allowlist = {n.strip() for n in requested.split(",") if n.strip()}
+
+          with open("containers/manifest.yaml", "r", encoding="utf-8") as fh:
+              manifest = yaml.safe_load(fh)
+
+          entries = []
+          for img in manifest["images"]:
+              name = img["name"]
+              if allowlist is not None and name not in allowlist:
+                  continue
+              # Each image becomes one matrix entry. Multi-arch images
+              # join their platforms with a comma so docker buildx gets
+              # a single --platform invocation.
+              platforms = ",".join(img["platforms"])
+              entries.append({
+                  "name": name,
+                  "tag": str(img["tag"]),
+                  "upstream": img.get("upstream", ""),
+                  "platforms": platforms,
+              })
+
+          payload = {"include": entries}
+          print("Matrix:", json.dumps(payload, indent=2))
+
+          out_file = os.environ["GITHUB_OUTPUT"]
+          with open(out_file, "a", encoding="utf-8") as fh:
+              fh.write(f"matrix={json.dumps(payload)}\n")
+          PY
+
+  build:
+    name: ${{ matrix.name }}
+    needs: matrix
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.matrix.outputs.matrix) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU (for cross-arch emulation)
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Resolve build mode (local Dockerfile vs upstream mirror)
+        id: mode
+        run: |
+          if [ -f "containers/${{ matrix.name }}/Dockerfile" ]; then
+            echo "mode=build" >> "$GITHUB_OUTPUT"
+            echo "[INFO] containers/${{ matrix.name }}/Dockerfile present — building locally"
+          else
+            echo "mode=mirror" >> "$GITHUB_OUTPUT"
+            echo "[INFO] No local Dockerfile — mirroring upstream ${{ matrix.upstream }}"
+          fi
+
+      # Some Dockerfiles (metadata-writer) bake in files from the repo
+      # root via a BUILD_CONTEXT_REPO_ROOT marker (see mirror-images.py).
+      - name: Resolve build context
+        if: steps.mode.outputs.mode == 'build'
+        id: context
+        run: |
+          if [ -f "containers/${{ matrix.name }}/BUILD_CONTEXT_REPO_ROOT" ]; then
+            echo "context=." >> "$GITHUB_OUTPUT"
+            echo "[INFO] BUILD_CONTEXT_REPO_ROOT present — building from repo root"
+          else
+            echo "context=containers/${{ matrix.name }}" >> "$GITHUB_OUTPUT"
+            echo "[INFO] Building from containers/${{ matrix.name }}"
+          fi
+
+      - name: Build & push (local Dockerfile)
+        if: steps.mode.outputs.mode == 'build'
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ steps.context.outputs.context }}
+          file: containers/${{ matrix.name }}/Dockerfile
+          platforms: ${{ matrix.platforms }}
+          provenance: false
+          sbom: false
+          push: true
+          tags: |
+            ${{ env.REGISTRY_NAMESPACE }}/${{ matrix.name }}:${{ matrix.tag }}
+            ${{ env.REGISTRY_NAMESPACE }}/${{ matrix.name }}:latest
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+
+      # Mirror path: copy the upstream image (per platform) to GHCR.
+      # `docker buildx imagetools create` copies the manifest list (or
+      # single-platform manifest) without re-pushing blobs, preserving
+      # the upstream digest.
+      - name: Mirror upstream → GHCR
+        if: steps.mode.outputs.mode == 'mirror'
+        run: |
+          set -euo pipefail
+          UPSTREAM="${{ matrix.upstream }}"
+          DEST="${{ env.REGISTRY_NAMESPACE }}/${{ matrix.name }}:${{ matrix.tag }}"
+          DEST_LATEST="${{ env.REGISTRY_NAMESPACE }}/${{ matrix.name }}:latest"
+
+          echo "[INFO] Mirroring $UPSTREAM -> $DEST (and :latest)"
+          docker buildx imagetools create --tag "$DEST" "$UPSTREAM"
+          docker buildx imagetools create --tag "$DEST_LATEST" "$UPSTREAM"
+
+      - name: Print pull command
+        run: |
+          {
+            echo "## ${{ matrix.name }}"
+            echo ""
+            echo '```bash'
+            echo "docker pull ${{ env.REGISTRY_NAMESPACE }}/${{ matrix.name }}:${{ matrix.tag }}"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  summary:
+    name: Print summary
+    needs: build
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Final pull instructions
+        run: |
+          {
+            echo "# Customer pull instructions"
+            echo ""
+            echo "GHCR images are public — no auth required."
+            echo ""
+            echo '```bash'
+            echo "docker pull ghcr.io/${{ github.repository_owner }}/aou-sv/hifiasm:0.19.9"
+            echo "docker pull ghcr.io/${{ github.repository_owner }}/aou-sv/pbmm2:1.13.1"
+            echo "docker pull ghcr.io/${{ github.repository_owner }}/aou-sv/sniffles2:2.4"
+            echo "docker pull ghcr.io/${{ github.repository_owner }}/aou-sv/pbsv:2.9.0"
+            echo "docker pull ghcr.io/${{ github.repository_owner }}/aou-sv/pav:2.4.6"
+            echo "docker pull ghcr.io/${{ github.repository_owner }}/aou-sv/pav2svs:0.1.0"
+            echo "docker pull ghcr.io/${{ github.repository_owner }}/aou-sv/harmoniser:0.1.0"
+            echo "docker pull ghcr.io/${{ github.repository_owner }}/aou-sv/metadata-writer:0.1.0"
+            echo '```'
+            echo ""
+            echo "Or pin to a digest by inspecting the package on the GHCR UI:"
+            echo "https://github.com/${{ github.repository_owner }}?tab=packages&repo_name=${{ github.event.repository.name }}"
+          } >> "$GITHUB_STEP_SUMMARY"

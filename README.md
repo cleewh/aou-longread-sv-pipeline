@@ -20,6 +20,33 @@ each variant.
 Version: see [`VERSION`](./VERSION). License: BSD-3-Clause (see
 `pyproject.toml`).
 
+## Public container images (no AWS account required)
+
+Pre-built images are published to GitHub Container Registry under
+`ghcr.io/cleewh/aou-sv/<tool>`. They're public — no `docker login` or
+AWS credentials needed. Pull with:
+
+```bash
+docker pull ghcr.io/cleewh/aou-sv/pav:2.4.6
+docker pull ghcr.io/cleewh/aou-sv/hifiasm:0.19.9
+docker pull ghcr.io/cleewh/aou-sv/pbmm2:1.13.1
+docker pull ghcr.io/cleewh/aou-sv/sniffles2:2.4
+docker pull ghcr.io/cleewh/aou-sv/pbsv:2.9.0
+docker pull ghcr.io/cleewh/aou-sv/pav2svs:0.1.0
+docker pull ghcr.io/cleewh/aou-sv/harmoniser:0.1.0
+docker pull ghcr.io/cleewh/aou-sv/metadata-writer:0.1.0
+```
+
+These images are functionally identical to the ECR copies used by the
+HealthOmics pipeline (same upstream digests; see
+[`containers/manifest.yaml`](./containers/manifest.yaml) for the digest
+table). The ECR-based deployment path (`bootstrap.sh` →
+`mirror-images.py` → `aws omics start-run`) is unchanged.
+
+The publish workflow lives at
+[`.github/workflows/publish-images.yml`](./.github/workflows/publish-images.yml)
+and can be re-triggered manually from the repo's **Actions** tab.
+
 ## Region and data residency
 
 The pipeline is region-agnostic — it uses your AWS CLI configured region

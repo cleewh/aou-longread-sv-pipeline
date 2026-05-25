@@ -94,8 +94,21 @@ def main() -> int:
         text = wdl.read_text()
         original = text
         for tool, entry in by_repo.items():
+            # Match ANY 12-digit-account ECR registry, not just the
+            # configured one. The WDL files in this repo are checked in
+            # with the upstream maintainer's account ID baked into the
+            # docker image references; a fresh customer running
+            # bootstrap.sh would otherwise see zero substitutions and
+            # deploy a workflow that points at the upstream account's
+            # ECR (which they have no permission to pull from). HealthOmics
+            # would then fail at run-time with `pull access denied`.
+            #
+            # By matching any account/region we always rewrite to the
+            # customer's REGISTRY, which is computed from their own
+            # .healthomics/config.toml or AWS CLI defaults.
             ecr_uri_re = re.compile(
-                rf"{re.escape(REGISTRY)}/aou-sv/{re.escape(tool)}"
+                r"\d{12}\.dkr\.ecr\.[a-z0-9-]+\.amazonaws\.com"
+                rf"/aou-sv/{re.escape(tool)}"
                 r"@sha256:[0-9a-f]{64}"
             )
 
